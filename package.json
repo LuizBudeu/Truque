@@ -1,0 +1,14 @@
+{
+  "name": "truque",
+  "version": "0.1.0",
+  "description": "Truqué — two-player online card game on a linear 12-space board",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "start": "node server/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
