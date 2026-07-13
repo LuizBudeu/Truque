@@ -27,11 +27,11 @@ The whole game is a pure rules engine in `/shared`: immutable state + `applyActi
 ## Domain vocabulary
 
 - `Card` = `{ rank: 2..14, suit }` with 11=J, 12=Q, 13=K, 14=A; combat values are computed by the engine, never stored on cards.
-- Play deck = 36 cards (♥♦♠, ranks 2–A); manilha deck = 13 ♣ cards (face card drawn → round has no manilha).
+- Play deck = 39 cards (♥♦♠, 13 ranks 2–A per suit, §10 Q10); manilha deck = 13 ♣ cards (face card or A drawn → round has no manilha).
 - Distance = number of spaces between the two pawns; drives ♠ (stronger close) / ♦ (stronger far) modifiers; ♥ ignores modifiers.
 - Danger zone = a player's first space; triggers the open-play rule (opponent commits **and reveals** first).
 - Graveyard = public discard pile; reshuffled into the play deck when it runs out.
 
 ## Phase status
 
-Track progress in `docs/PLANNING.md` §9. Each phase must be verifiably done before the next starts. Phase 0 (skeleton + rule sign-off) is complete; Phase 1 (rules engine + tests) is next.
+Track progress in `docs/PLANNING.md` §9. Each phase must be verifiably done before the next starts. Phases 0–1 are complete (rules engine fully implemented and tested; full games play through the reducer alone). Phase 2 (hotseat UI) is next. Note: `state.phase` only takes the resting values `SWAP_WINDOW | PICK_CARDS | WINNER_MOVE | GAME_OVER` — the other conceptual phases from §3.2 resolve atomically inside reducer transitions.

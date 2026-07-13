@@ -23,6 +23,11 @@ export const PLAY_SUITS = ['hearts', 'diamonds', 'spades'];
 /** All ranks, ascending. 11=J, 12=Q, 13=K, 14=A. */
 export const RANKS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
 
+export const JACK = 11;
+export const QUEEN = 12;
+export const KING = 13;
+export const ACE = 14;
+
 /**
  * Create a deterministic PRNG from a 32-bit seed (mulberry32).
  *
@@ -30,16 +35,23 @@ export const RANKS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
  * @returns {() => number} function returning floats in [0, 1)
  */
 export function mulberry32(seed) {
-  throw new Error('Not implemented (Phase 1)');
+  let a = seed >>> 0;
+  return function next() {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
 /**
- * Build the 36-card play deck: ranks 2–A of ♥ ♦ ♠. Rulebook 2.3; §10 Q7.
+ * Build the 39-card play deck: ranks 2–A of ♥ ♦ ♠, 13 per suit.
+ * Rulebook 2.3; §10 Q7/Q10.
  *
  * @returns {Card[]} unshuffled deck
  */
 export function buildPlayDeck() {
-  throw new Error('Not implemented (Phase 1)');
+  return PLAY_SUITS.flatMap((suit) => RANKS.map((rank) => ({ rank, suit })));
 }
 
 /**
@@ -49,7 +61,7 @@ export function buildPlayDeck() {
  * @returns {Card[]} unshuffled deck
  */
 export function buildManilhaDeck() {
-  throw new Error('Not implemented (Phase 1)');
+  return RANKS.map((rank) => ({ rank, suit: 'clubs' }));
 }
 
 /**
@@ -60,5 +72,21 @@ export function buildManilhaDeck() {
  * @returns {Card[]}
  */
 export function shuffle(cards, rng) {
-  throw new Error('Not implemented (Phase 1)');
+  const result = [...cards];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+/**
+ * Two cards are the same physical card (single deck: rank+suit is unique).
+ *
+ * @param {Card} a
+ * @param {Card} b
+ * @returns {boolean}
+ */
+export function cardEquals(a, b) {
+  return a.rank === b.rank && a.suit === b.suit;
 }

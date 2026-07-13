@@ -272,7 +272,7 @@ _Rationale: debugging rules and networking at the same time is miserable. Rules 
 ## 9. Milestone checklist
 
 - [x] Phase 0 — rules signed off, skeleton runs
-- [ ] Phase 1 — full game playable via tests
+- [x] Phase 1 — full game playable via tests
 - [ ] Phase 2 — hotseat playable in browser
 - [ ] Phase 3 — online play between two machines
 - [ ] Phase 4 — visual pass complete
@@ -295,16 +295,37 @@ To be answered by the game designers before Phase 1. Record the answer inline an
 **Answer:** If a player is already on their danger space and they tie, they lose the game.
 
 **Q5 — True ties.** With the ♥→♦→♠→♥ cycle, same rank + same suit is impossible in a single deck... but can modifiers create unresolvable comparisons anywhere? Confirm the tie rule in 2.4 only triggers on equal _modified values_ with the suit cycle then deciding, and a "tie" result only occurs when the cycle is somehow bypassed — or specify exactly when 'empate' happens.
-**Answer:** A tie happens when the numerical value of both cards are the same (already including modified values because of space), and there's no external special rule to affect the result.
+**Answer:** A tie happens when the numerical value of both cards are the same (already including modified values because of space), and there's no external special rule to affect the result. _(Superseded by Q11: the suit cycle DOES break numeric ties.)_
 
 **Q6 — Swap window timing.** Swaps happen "while the next manilha is not yet revealed". Confirm the window is between the end of movement/draw and the next manilha reveal (i.e. `SWAP_WINDOW` precedes `DRAW_MANILHA` in the round loop).
 **Answer:** `SWAP_WINDOW` precedes `DRAW_MANILHA` in the round loop
 
 **Q7 — Play deck composition.** Play deck = all ♥♦♠ cards including A/K/Q/J (36 cards total, 12 per suit)? Manilha deck = all 13 ♣ including face cards (which yield "no manilha" rounds)?
-**Answer:** Yes
+**Answer:** Yes _(the card count was a miscount — corrected by Q10: 39 cards, 13 per suit)_
 
 **Q8 — Danger-zone open play, order of operations.** When the opponent must "play open": do they commit _and reveal_ before the endangered player picks? Can the endangered player then swap cards, or is the swap window already closed?
 **Answer:** Commit and reveal.
 
 **Q9 — Simultaneous game over.** Can any effect push both players out in the same round (e.g. tie retreats)? If so, is it a draw?
 **Answer:** Yes, a draw is possible
+
+_Questions Q10–Q14 were raised and answered during Phase 1 implementation (2026-07-13). Q10–Q13 were decided by the designers; Q14 records implementation decisions made from the rulebook's intent — flag if any is wrong._
+
+**Q10 — Play deck recount.** Ranks 2–10 + J, Q, K, A are 13 per suit, so the "36 / 12 per suit" figure in Q7 doesn't add up. Which is it?
+**Answer:** 39 cards — full ♥♦♠ suits, 13 ranks each. Manilha deck unchanged: all 13 ♣.
+
+**Q11 — Numeric ties, final ruling (supersedes the Q5 wording).** Does the suit cycle break equal modified values, per rulebook 2.5?
+**Answer:** Yes — equal modified values are broken by the suit cycle. A true tie ("empate", both retreat 1) only occurs when the cycle cannot decide: both players play J (Q2b), or an A forces suit comparison against a card of the same suit. A single J inverting a tie leaves it a tie.
+
+**Q12 — Manilha value vs distance modifiers.** Is a manilha-rank card flat 14 or 14 + modifier?
+**Answer:** Flat 14, immune to distance modifiers (rulebook 2.7 "worth 14 points"). Two manilha-rank cards are both 14 and the suit cycle decides. K's buff removal does not affect the manilha's 14 (it is not a buff).
+
+**Q13 — Winner's move alongside specials.** When a special dictates the loser's movement (A win: retreat 2; K win: push up to 3; lost with K: return to first space), does the winner still take their normal 0–2 (0–5 with Q) move?
+**Answer:** Yes, always. Order: the loser's forced movement resolves first, then the winner's own move. A K winner chooses both the push (0–3) and their own move.
+
+**Q14 — Movement limits & effect conflicts (implementation decisions).**
+- Pawns never pass or share a space: the winner's advance caps at the space adjacent to the opponent (distance 0).
+- The winner's voluntary retreat caps at their own first space — no voluntary elimination.
+- Forced retreats (base 1, A's 2, tie retreat) beyond a player's first space eliminate them (rulebook 2.12). K's push instead clamps at the loser's first space — except when the loser already stands there, where any push ≥ 1 eliminates them (rulebook 2.8, parenthetical).
+- Conflicting loss effects: a loser who played K returns to their first space; this replaces any other retreat effect (e.g. also losing against an A).
+- A's forced suit-order comparison ignores numeric values entirely, manilha included.
