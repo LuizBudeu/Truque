@@ -280,7 +280,7 @@ _Rationale: debugging rules and networking at the same time is miserable. Rules 
 - [x] Phase 1 — full game playable via tests
 - [x] Phase 2 — hotseat playable in browser
 - [x] Phase 3 — online play between two machines
-- [ ] Phase 4 — visual pass complete
+- [x] Phase 4 — visual pass complete
 - [ ] Phase 5 — demo-ready
 
 ## 10. Open rule questions (decision log)

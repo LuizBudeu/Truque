@@ -1,67 +1,205 @@
-/* Linear 12-space board, pawns, danger spaces, distance readout. */
+/* The battlefield: castle towers, 12 hexagonal spaces (Figure 2), banner
+   pawns, danger-zone glow, and the distance/buff bar. */
 
 .board-zone {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
+
+.battlefield {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* --- hex spaces ------------------------------------------------------------ */
 
 .board {
   display: flex;
-  gap: 4px;
 }
 
 .space {
+  position: relative;
   width: 56px;
-  height: 56px;
-  background: #dee2e6;
-  border: 2px solid #adb5bd;
-  border-radius: 8px;
+  height: 54px;
+  margin-right: -7px; /* nest the hex points like the printed board */
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.space.danger {
-  background: #ffe3e3;
-  border-color: var(--danger);
+.space-hex {
+  position: absolute;
+  inset: 3px 0;
+  clip-path: polygon(0 50%, 22% 0, 78% 0, 100% 50%, 78% 100%, 22% 100%);
+  background: linear-gradient(180deg, #3d4658, #2c3342);
+  box-shadow: inset 0 0 0 40px rgba(255, 255, 255, 0.02);
 }
+
+/* Danger spaces smoulder — the first space on each side (Rulebook 2.9). */
+.space.danger .space-hex {
+  background: linear-gradient(180deg, #55333a, #3a2029);
+}
+
+/* Full alarm only when someone actually stands there. */
+.space.danger.has-pawn .space-hex {
+  background: linear-gradient(180deg, #7a3038, #521f27);
+  animation: danger-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes danger-pulse {
+  50% {
+    filter: brightness(1.45);
+  }
+}
+
+/* --- towers ------------------------------------------------------------------ */
+
+.tower {
+  width: 40px;
+  height: 84px;
+  clip-path: polygon(
+    0% 100%, 0% 14%, 12% 14%, 12% 0%, 30% 0%, 30% 14%,
+    44% 14%, 44% 0%, 56% 0%, 56% 14%,
+    70% 14%, 70% 0%, 88% 0%, 88% 14%, 100% 14%, 100% 100%
+  );
+  background: linear-gradient(180deg, #4a5163, #31374a 70%, #262b3a);
+  flex-shrink: 0;
+}
+
+.tower.alert {
+  animation: tower-alert 1.4s ease-in-out infinite;
+}
+
+@keyframes tower-alert {
+  0%,
+  100% {
+    background: linear-gradient(180deg, #6e3a44, #4a2530 70%, #341a22);
+  }
+  50% {
+    background: linear-gradient(180deg, #94434e, #613039 70%, #442129);
+    filter: brightness(1.25);
+  }
+}
+
+/* --- pawns ------------------------------------------------------------------- */
 
 .pawn {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  color: white;
+  position: relative;
+  z-index: 1;
+  width: 34px;
+  height: 44px;
+  clip-path: polygon(0 0, 100% 0, 100% 76%, 50% 100%, 0 76%);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  padding-top: 8px;
+  color: white;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.5));
+  will-change: transform;
+}
+
+.pawn-flag {
+  pointer-events: none;
 }
 
 .pawn-p0 {
-  background: var(--p0);
+  background: linear-gradient(180deg, var(--p0-soft), var(--p0) 45%, #35599c);
 }
 
 .pawn-p1 {
-  background: var(--p1);
+  background: linear-gradient(180deg, var(--p1-soft), var(--p1) 45%, #a4571f);
 }
 
-.distance-readout {
-  font-size: 14px;
+/* --- distance / buff bar ------------------------------------------------------- */
+
+.buff-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.buff-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
   color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 11px;
 }
 
-@media (max-width: 780px) {
+.buff-chip b {
+  color: var(--ink-light);
+  font-size: 13px;
+}
+
+.buff-chip i {
+  font-style: normal;
+  font-size: 14px;
+}
+
+.buff-chip.suit-hearts i {
+  color: #e06c75;
+}
+
+.buff-chip.suit-diamonds i {
+  color: #e5b567;
+}
+
+.buff-chip.suit-spades i {
+  color: #c3cddf;
+}
+
+.buff-chip.buffed {
+  border-color: rgba(120, 190, 120, 0.55);
+}
+
+.buff-chip.buffed b {
+  color: #8fd18f;
+}
+
+.buff-chip.nerfed {
+  border-color: rgba(224, 82, 82, 0.45);
+}
+
+.buff-chip.nerfed b {
+  color: #e58a8a;
+}
+
+.buff-chip.distance {
+  background: var(--panel-strong);
+}
+
+/* --- responsive ------------------------------------------------------------------ */
+
+@media (max-width: 900px) {
   .space {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
+    margin-right: -5px;
+  }
+
+  .space-hex {
+    inset: 2px 0;
   }
 
   .pawn {
-    width: 28px;
-    height: 28px;
-    font-size: 11px;
+    width: 26px;
+    height: 34px;
+    font-size: 10px;
+    padding-top: 5px;
+  }
+
+  .tower {
+    width: 32px;
+    height: 66px;
   }
 }

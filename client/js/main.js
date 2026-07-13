@@ -1,7 +1,8 @@
 /**
  * Client bootstrap and flow control — the only module that touches the DOM:
- * it renders the model to #app via innerHTML and delegates clicks through
- * data-action attributes.
+ * it renders the model to #app via innerHTML, delegates clicks through
+ * data-action attributes, and executes animation plans from animate.js
+ * (class toggles + FLIP pawn slides) on top of the rendered final state.
  *
  * Two modes share the same render pipeline (action → … → view → render):
  * - Online (Phase 3): net.js talks to the authoritative server; the last
@@ -9,15 +10,23 @@
  *   sessionStorage so a refresh rejoins the same seat.
  * - Hotseat (Phase 2, kept behind ?hotseat as a debugging tool): the store
  *   runs the reducer locally, with the pass-the-device curtain.
+ *
+ * Rendering has two lanes (Phase 4):
+ * - rerender(): UI-only changes (selections, modals) — instant, no animation.
+ * - transition(): the game VIEW changed — queued and pumped serially so a
+ *   burst of server messages can't cut an animation short (PLANNING.md §3.6).
  */
 
 import { newGame, dispatch, getState, subscribe, nextSeat, buildModel, buildViewModel } from './store.js';
 import { renderApp } from './render.js';
+import { buildAnimationPlan } from './animate.js';
 import { createConnection } from './net.js';
 
 const app = document.querySelector('#app');
 const SESSION_KEY = 'truque-session';
+const SUITS_KEY = 'truque-fantasy-suits'; // localStorage: survives across games
 const HOTSEAT_ENABLED = new URLSearchParams(location.search).has('hotseat');
+const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 const ui = {
   curtain: false,
@@ -26,6 +35,7 @@ const ui = {
   push: 0, // K push choice
   graveyardOpen: false,
   concedeArmed: false, // first concede click; the HUD asks for confirmation
+  fantasySuits: localStorage.getItem(SUITS_KEY) === '1', // ♠♦♥♣ vs 🗡🏹🔮💀
 };
 
 let mode = 'menu'; // 'menu' | 'hotseat' | 'online'
@@ -47,6 +57,11 @@ const online = {
   opponentConnected: false,
   intent: null, // what to send when the socket (re)opens
 };
+
+// Animation-queue state — declared before the bootstrap below, which can hit
+// clearTransitions() via goOnline() on a mid-game refresh.
+let animating = false;
+const pendingModels = [];
 
 subscribe(onHotseatStateChange);
 app.addEventListener('click', onClick);
@@ -79,6 +94,7 @@ function onClick(event) {
       break;
     case 'menu':
       mode = 'menu';
+      clearTransitions();
       rerender();
       break;
     case 'create-room':
@@ -133,6 +149,11 @@ function onClick(event) {
     case 'confirm-concede':
       ui.concedeArmed = false;
       act({ type: 'CONCEDE', player: mySeat() });
+      break;
+    case 'toggle-suits':
+      ui.fantasySuits = !ui.fantasySuits;
+      localStorage.setItem(SUITS_KEY, ui.fantasySuits ? '1' : '0');
+      rerender();
       break;
     case 'open-graveyard':
       ui.graveyardOpen = true;
@@ -208,6 +229,7 @@ function goOnline(intent) {
   online.playerToken = intent.playerToken ?? null;
   online.view = null;
   online.opponentConnected = false;
+  clearTransitions();
 
   const url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`;
   net = createConnection({
@@ -249,7 +271,7 @@ function onServerMessage(msg) {
     case 'VIEW':
       online.view = msg.view;
       resetSelections();
-      rerender();
+      transition();
       break;
     case 'OPPONENT_STATUS':
       online.opponentConnected = msg.connected;
@@ -285,6 +307,7 @@ function leaveOnline() {
   online.playerIndex = null;
   mode = 'menu';
   menuError = null;
+  clearTransitions();
   rerender();
 }
 
@@ -314,6 +337,7 @@ function startHotseat() {
   ui.graveyardOpen = false;
   seat = null;
   pendingSeat = null;
+  clearTransitions();
   newGame(Date.now() >>> 0); // seeded RNG lives in /shared; the seed itself may be wall-clock
 }
 
@@ -324,11 +348,11 @@ function onHotseatStateChange(state) {
     pendingSeat = next;
     ui.curtain = true;
   }
-  rerender();
+  transition();
 }
 
 // ---------------------------------------------------------------------------
-// Rendering
+// Rendering & animation
 // ---------------------------------------------------------------------------
 
 function currentModel() {
@@ -349,7 +373,90 @@ function currentModel() {
   return { screen: 'menu', hotseatEnabled: HOTSEAT_ENABLED, error: menuError };
 }
 
+/** Instant re-render for UI-only changes (selections, modals, banners). */
 function rerender() {
   lastModel = currentModel();
   app.innerHTML = renderApp(lastModel);
 }
+
+/**
+ * The game view changed: snapshot the model NOW (later events may replace
+ * the view again) and pump the queue — each entry renders its final state,
+ * then plays the animation plan for the diff before the next entry lands.
+ */
+function transition() {
+  pendingModels.push(currentModel());
+  void pumpTransitions();
+}
+
+function clearTransitions() {
+  pendingModels.length = 0;
+}
+
+/** The view a model rendered on the game screen, or null (menu/lobby/curtain). */
+const renderedView = (model) =>
+  model && model.screen === 'game' && !model.ui?.curtain ? model.view : null;
+
+async function pumpTransitions() {
+  if (animating) return;
+  animating = true;
+  try {
+    while (pendingModels.length > 0) {
+      const prev = lastModel;
+      lastModel = pendingModels.shift();
+      app.innerHTML = renderApp(lastModel);
+      const plan = buildAnimationPlan(renderedView(prev), renderedView(lastModel));
+      if (plan.length > 0 && !REDUCED_MOTION.matches) await runPlan(plan);
+    }
+  } finally {
+    animating = false;
+  }
+}
+
+/**
+ * Execute one plan against the current DOM. The final state is already
+ * rendered — steps only decorate it (add a CSS class, FLIP a pawn), so a
+ * missing element (user opened a modal mid-plan) simply skips a step.
+ */
+async function runPlan(plan) {
+  for (const step of plan) {
+    switch (step.type) {
+      case 'reveal':
+        app.querySelector('.reveal-panel .reveal')?.classList.add('animate');
+        await wait(step.duration);
+        break;
+      case 'manilha-flip':
+        app.querySelector('.manilha-slot')?.classList.add('animate');
+        await wait(step.duration);
+        break;
+      case 'pawn-slide':
+        await slidePawns(step);
+        break;
+    }
+  }
+}
+
+/** FLIP: place each pawn back at its old space with a transform, reflow,
+ *  then release so a CSS transition carries it to its rendered position. */
+async function slidePawns(step) {
+  const spaces = app.querySelectorAll('.board .space');
+  const moved = [];
+  for (const { player, from, to } of step.moves) {
+    const pawn = app.querySelector(`.pawn-p${player}`);
+    const [a, b] = [spaces[from], spaces[to]];
+    if (!pawn || !a || !b) continue;
+    const dx = a.getBoundingClientRect().left - b.getBoundingClientRect().left;
+    pawn.style.transform = `translateX(${dx}px)`;
+    moved.push(pawn);
+  }
+  if (moved.length === 0) return;
+  void app.offsetWidth; // commit the start position before transitioning
+  for (const pawn of moved) {
+    pawn.style.transition = `transform ${step.duration - 40}ms cubic-bezier(0.3, 0.9, 0.35, 1.05)`;
+    pawn.style.transform = '';
+  }
+  await wait(step.duration);
+  for (const pawn of moved) pawn.style.transition = '';
+}
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

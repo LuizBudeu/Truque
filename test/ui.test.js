@@ -264,3 +264,142 @@ describe('full-game render sweep', () => {
     }
   });
 });
+
+describe('phase 4 visuals', () => {
+  test('buff bar reads the current distance modifiers (Rulebook 2.6, Table 1)', () => {
+    const html = renderApp(buildModel(makeState({ positions: [4, 5] }), 0, ui()));
+    assert.ok(html.includes('Distance <b>0</b>'));
+    assert.ok(/suit-spades buffed[^>]*>.*\+3/.test(html)); // ♠ close-range buff
+    assert.ok(/suit-diamonds nerfed[^>]*>.*-2/.test(html)); // ♦ close-range nerf
+  });
+
+  test('opponent row shows face-down cards only, plus the committed cue', () => {
+    const s0 = makeState();
+    const before = renderApp(onlineModel(s0, 0));
+    assert.ok(!before.includes('Card committed'));
+    assert.equal(before.match(/card-back/g).length >= s0.hands[1].length, true);
+    const s1 = applyAction(s0, { type: 'PLAY_CARD', player: 1, card: C(3, 'hearts') });
+    assert.ok(renderApp(onlineModel(s1, 0)).includes('Card committed'));
+  });
+
+  test('danger-zone cue: the threatened tower lights up', () => {
+    const safe = renderApp(buildModel(makeState(), 0, ui()));
+    assert.ok(!safe.includes('tower-left alert'));
+    const html = renderApp(buildModel(makeState({ positions: [0, 7] }), 1, ui()));
+    assert.ok(html.includes('tower-left alert'));
+    assert.ok(!html.includes('tower-right alert'));
+  });
+
+  test('reveal panel breaks the values down: base, distance modifier, total', () => {
+    const s = makeState({
+      phase: 'WINNER_MOVE',
+      positions: [4, 8],
+      lastResolution: {
+        winner: 0,
+        cards: [C(9, 'diamonds'), C(7, 'spades')],
+        effectiveValues: [10, 6],
+        manilha: null,
+        usedSuitCycle: false,
+        inverted: false,
+        buffsRemoved: false,
+        loserEffect: { type: 'RETREAT', amount: 1 },
+        winnerMoveRange: 2,
+        distance: 3,
+      },
+    });
+    const html = renderApp(buildModel(s, 0, ui()));
+    assert.ok(html.includes('+1 dist')); // ♦ at distance 3
+    assert.ok(html.includes('<b>= 10</b>'));
+    assert.ok(html.includes('-1 dist')); // ♠ at distance 3
+    assert.ok(html.includes('<b>= 6</b>'));
+  });
+
+  test('a played manilha shows the flat-14 breakdown', () => {
+    const s = makeState({
+      phase: 'WINNER_MOVE',
+      lastResolution: {
+        winner: 0,
+        cards: [C(5, 'hearts'), C(10, 'diamonds')],
+        effectiveValues: [14, 10],
+        manilha: 5,
+        usedSuitCycle: false,
+        inverted: false,
+        buffsRemoved: false,
+        loserEffect: { type: 'RETREAT', amount: 1 },
+        winnerMoveRange: 2,
+        distance: 2,
+      },
+    });
+    const html = renderApp(buildModel(s, 0, ui()));
+    assert.ok(html.includes('Manilha <b>= 14</b>'));
+  });
+
+  test('suit-cycle reference is always on the game screen', () => {
+    const html = renderApp(buildModel(makeState(), 0, ui()));
+    assert.ok(html.includes('cycle-triangle'));
+    for (const suit of ['hearts', 'diamonds', 'spades']) {
+      assert.ok(new RegExp(`cycle-corner[^>]*suit-${suit}`).test(html), suit);
+    }
+  });
+
+  test('fantasy-suit toggle: theme class on the screen root, glyphs stay in CSS', () => {
+    const plain = renderApp(buildModel(makeState(), 0, ui()));
+    assert.ok(!plain.includes('theme-fantasy'));
+    assert.ok(plain.includes('data-action="toggle-suits"'));
+    const fantasy = renderApp(buildModel(makeState(), 0, ui({ fantasySuits: true })));
+    assert.ok(fantasy.includes('theme-fantasy'));
+    // The markup is theme-agnostic: suit marks are empty data-suit elements,
+    // so no literal glyph swap can desync the two themes.
+    assert.ok(fantasy.includes('data-suit="hearts"'));
+  });
+
+  test('the last-round box sits in the sidebar, not the main column', () => {
+    const s = makeState({
+      phase: 'WINNER_MOVE',
+      positions: [4, 8],
+      lastResolution: {
+        winner: 0,
+        cards: [C(9, 'diamonds'), C(7, 'spades')],
+        effectiveValues: [9, 7],
+        manilha: null,
+        usedSuitCycle: false,
+        inverted: false,
+        buffsRemoved: false,
+        loserEffect: { type: 'RETREAT', amount: 1 },
+        winnerMoveRange: 2,
+        distance: 3,
+      },
+    });
+    const html = renderApp(buildModel(s, 0, ui()));
+    const side = html.slice(html.indexOf('<aside class="game-side"'));
+    assert.ok(side.includes('reveal-panel'));
+    assert.ok(!html.slice(0, html.indexOf('<aside')).includes('reveal-panel'));
+    // No resolution yet → sidebar still carries the suit-cycle reference.
+    const fresh = renderApp(buildModel(makeState(), 0, ui()));
+    assert.ok(fresh.includes('game-side'));
+    assert.ok(!fresh.includes('reveal-panel'));
+  });
+
+  test('online reveal speaks to the seat: You vs Opponent', () => {
+    const s = makeState({
+      phase: 'WINNER_MOVE',
+      positions: [4, 8],
+      lastResolution: {
+        winner: 0,
+        cards: [C(9, 'diamonds'), C(7, 'spades')],
+        effectiveValues: [9, 7],
+        manilha: null,
+        usedSuitCycle: false,
+        inverted: false,
+        buffsRemoved: false,
+        loserEffect: { type: 'RETREAT', amount: 1 },
+        winnerMoveRange: 2,
+        distance: 3,
+      },
+    });
+    assert.ok(renderApp(onlineModel(s, 0)).includes('You wins the round') === false);
+    assert.ok(renderApp(onlineModel(s, 0)).includes('You win the round'));
+    assert.ok(renderApp(onlineModel(s, 1)).includes('Opponent wins the round'));
+    assert.ok(renderApp(onlineModel(s, 1)).includes('You retreat 1'));
+  });
+});

@@ -5,7 +5,7 @@ import { cardHTML } from './card.js';
 export function graveyardHTML(view) {
   const cards = view.graveyard.length
     ? view.graveyard.map((c) => cardHTML(c, { small: true })).join('')
-    : '<p>Empty — no cards discarded yet.</p>';
+    : '<p class="hint">Empty — no cards discarded yet.</p>';
   // data-action="noop" keeps clicks inside the panel from hitting the backdrop.
   return `
     <div class="modal-backdrop" data-action="close-graveyard">

@@ -1,30 +1,56 @@
-/** The linear 12-space board with pawns, danger spaces, and the distance readout. */
+/**
+ * The battlefield: two castle towers flanking 12 hexagonal spaces (Figure 2
+ * of the rulebook), banner pawns, danger-zone alerts, and the always-visible
+ * distance/modifier bar so players can read the current ♠/♦ buffs at a glance.
+ */
 
 import { BOARD_SIZE, DANGER_SPACES, distanceBetween, distanceModifier } from '../../../shared/rules.js';
+import { suitGlyphHTML } from './card.js';
 
 const signed = (n) => (n > 0 ? `+${n}` : `${n}`);
+
+const pawnHTML = (player) =>
+  `<span class="pawn pawn-p${player}"><span class="pawn-flag">P${player + 1}</span></span>`;
 
 export function boardHTML(view) {
   const [p0, p1] = view.positions;
   const spaces = [];
   for (let i = 0; i < BOARD_SIZE; i++) {
+    const pawn = i === p0 ? pawnHTML(0) : i === p1 ? pawnHTML(1) : '';
     const classes = ['space'];
     if (i === DANGER_SPACES[0] || i === DANGER_SPACES[1]) classes.push('danger');
-    const pawn =
-      i === p0
-        ? '<span class="pawn pawn-p0">P1</span>'
-        : i === p1
-          ? '<span class="pawn pawn-p1">P2</span>'
-          : '';
-    spaces.push(`<div class="${classes.join(' ')}">${pawn}</div>`);
+    if (pawn) classes.push('has-pawn');
+    spaces.push(`<div class="${classes.join(' ')}"><span class="space-hex"></span>${pawn}</div>`);
   }
-  const d = distanceBetween(view.positions);
+
+  // Danger-zone tension cue: the threatened side's tower lights up.
+  const towerL = `<div class="tower tower-left${p0 === DANGER_SPACES[0] ? ' alert' : ''}"></div>`;
+  const towerR = `<div class="tower tower-right${p1 === DANGER_SPACES[1] ? ' alert' : ''}"></div>`;
+
   return `
     <div class="board-zone">
-      <div class="board">${spaces.join('')}</div>
-      <div class="distance-readout">
-        Distance ${d} — modifiers: ♠ ${signed(distanceModifier('spades', d))} ·
-        ♦ ${signed(distanceModifier('diamonds', d))} · ♥ 0
+      <div class="battlefield">
+        ${towerL}
+        <div class="board">${spaces.join('')}</div>
+        ${towerR}
       </div>
+      ${buffBarHTML(view.positions)}
+    </div>`;
+}
+
+/** Rulebook 2.6, Table 1 — live readout of the distance modifiers. */
+function buffBarHTML(positions) {
+  const d = distanceBetween(positions);
+  const chip = (suit, label) => {
+    const mod = distanceModifier(suit, d);
+    const tone = mod > 0 ? 'buffed' : mod < 0 ? 'nerfed' : 'neutral';
+    return `<span class="buff-chip suit-${suit} ${tone}">${suitGlyphHTML(suit)} ${label} <b>${signed(mod)}</b></span>`;
+  };
+  return `
+    <div class="buff-bar">
+      <span class="buff-chip distance">Distance <b>${d}</b></span>
+      ${chip('spades', 'Sword')}
+      ${chip('diamonds', 'Bow')}
+      ${chip('hearts', 'Magic')}
     </div>`;
 }

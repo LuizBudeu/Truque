@@ -1,4 +1,5 @@
-/** Top bar: round, phase, seat badge, counts, graveyard access, concede. */
+/** Top bar: brand, round, phase, seat badge, concede. Deck/graveyard counts
+ *  live on the table piles (Figure 2), not up here. */
 
 const PHASE_LABELS = {
   SWAP_WINDOW: 'Swap window',
@@ -12,8 +13,9 @@ const PHASE_LABELS = {
  * @param {Object} [options]
  * @param {boolean} [options.concede] - show the concede control (game running)
  * @param {boolean} [options.concedeArmed] - first click happened; ask to confirm
+ * @param {boolean} [options.fantasy] - fantasy suit glyphs are active
  */
-export function hudHTML(view, { concede = false, concedeArmed = false } = {}) {
+export function hudHTML(view, { concede = false, concedeArmed = false, fantasy = false } = {}) {
   const concedeControls = !concede
     ? ''
     : concedeArmed
@@ -21,20 +23,20 @@ export function hudHTML(view, { concede = false, concedeArmed = false } = {}) {
            <button type="button" class="danger" data-action="confirm-concede">Yes, concede</button>
            <button type="button" data-action="cancel-concede">Keep playing</button>
          </span>`
-      : '<button type="button" class="danger" data-action="concede">Concede</button>';
+      : '<button type="button" class="danger subtle" data-action="concede">Concede</button>';
   return `
     <header class="hud">
       <div class="hud-left">
-        <strong>Truqué</strong>
-        <span>Round ${view.round}</span>
-        <span>${PHASE_LABELS[view.phase]}</span>
-        <span class="seat-badge seat-${view.playerIndex}">You are Player ${view.playerIndex + 1}</span>
+        <span class="brand">Truqué</span>
+        <span class="hud-stat">Round ${view.round}</span>
+        <span class="hud-phase">${PHASE_LABELS[view.phase]}</span>
       </div>
       <div class="hud-right">
-        <span>Deck ${view.playDeckCount}</span>
-        <span>Opponent hand ${view.opponentHandCount}</span>
-        <span>Swaps left — P1: ${view.swapsRemaining[0]} · P2: ${view.swapsRemaining[1]}</span>
-        <button type="button" data-action="open-graveyard">Graveyard (${view.graveyard.length})</button>
+        <span class="seat-badge seat-${view.playerIndex}">You are Player ${view.playerIndex + 1}</span>
+        <button type="button" class="subtle" data-action="toggle-suits"
+                title="Switch between classic suits and fantasy weapons">
+          ${fantasy ? '♠ Classic suits' : '🗡 Fantasy suits'}
+        </button>
         ${concedeControls}
       </div>
     </header>`;

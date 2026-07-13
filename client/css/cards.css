@@ -1,79 +1,402 @@
-/* Card faces, hand layout, selection states. */
+/* Card faces & backs, hand layout, flip machinery, piles, manilha cluster. */
+
+/* --- faces ------------------------------------------------------------------ */
 
 .card {
-  width: 58px;
-  height: 82px;
-  background: white;
-  border: 2px solid #ced4da;
-  border-radius: 8px;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  font-size: 20px;
-  font-weight: 700;
-  padding: 0;
-  transition: transform 120ms ease, border-color 120ms ease;
+    position: relative;
+    width: 66px;
+    height: 94px;
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.5), transparent 40%), var(--parchment);
+    border: 1px solid #c9bb9b;
+    border-radius: 9px;
+    box-shadow:
+        inset 0 0 0 3px var(--parchment),
+        inset 0 0 0 4px #d6c9a8,
+        0 2px 6px rgba(0, 0, 0, 0.4);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: var(--card-ink);
+    flex-shrink: 0;
+    transition:
+        transform 140ms ease,
+        box-shadow 140ms ease;
 }
 
-button.card {
-  cursor: pointer;
+.card-corner {
+    position: absolute;
+    top: 5px;
+    left: 7px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+    font-weight: 700;
+    font-size: 14px;
 }
 
-button.card:hover:not(:disabled) {
-  transform: translateY(-4px);
-  background: white;
+.card-corner i {
+    font-style: normal;
+    font-size: 12px;
 }
 
-.card.selected {
-  border-color: var(--p0);
-  outline: 3px solid var(--p0-soft);
-  transform: translateY(-8px);
+.card-corner.mirrored {
+    top: auto;
+    left: auto;
+    bottom: 5px;
+    right: 7px;
+    transform: rotate(180deg);
+}
+
+.card-center {
+    font-size: 30px;
+    line-height: 1;
+}
+
+.card-center.court {
+    font-family: var(--serif);
+    font-size: 34px;
+    font-weight: 700;
 }
 
 .card.small {
-  width: 42px;
-  height: 60px;
-  font-size: 14px;
+    width: 46px;
+    height: 64px;
+    border-radius: 7px;
+    box-shadow:
+        inset 0 0 0 2px var(--parchment),
+        inset 0 0 0 3px #d6c9a8,
+        0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
-.suit-hearts,
+.card.small .card-corner {
+    top: 3px;
+    left: 4px;
+    font-size: 10px;
+}
+
+.card.small .card-corner i {
+    font-size: 9px;
+}
+
+.card.small .card-corner.mirrored {
+    top: auto;
+    left: auto;
+    bottom: 3px;
+    right: 4px;
+}
+
+.card.small .card-center {
+    font-size: 19px;
+}
+
+.card.small .card-center.court {
+    font-size: 22px;
+}
+
+/* --- suit glyphs -----------------------------------------------------------
+   Every suit mark is an empty <i class="suit-glyph" data-suit> whose
+   character comes from CSS, so .theme-fantasy on the screen root swaps the
+   whole game to weapon emblems (the suits map to weapon classes in
+   Rulebook 2.2) without touching any markup. */
+
+.suit-glyph {
+    font-style: normal;
+}
+
+.suit-glyph[data-suit="hearts"]::before {
+    content: "♥";
+}
+
+.suit-glyph[data-suit="diamonds"]::before {
+    content: "♦";
+}
+
+.suit-glyph[data-suit="spades"]::before {
+    content: "♠";
+}
+
+.suit-glyph[data-suit="clubs"]::before {
+    content: "♣";
+}
+
+.theme-fantasy .suit-glyph[data-suit="hearts"]::before {
+    content: "🔮";
+}
+
+.theme-fantasy .suit-glyph[data-suit="diamonds"]::before {
+    content: "🏹";
+}
+
+.theme-fantasy .suit-glyph[data-suit="spades"]::before {
+    content: "🗡";
+}
+
+.theme-fantasy .suit-glyph[data-suit="clubs"]::before {
+    content: "💀";
+}
+
+/* Emoji carry their own colors and sit a touch large — trim them on cards. */
+.theme-fantasy .card .suit-glyph::before {
+    font-size: 0.88em;
+}
+
+/* Suit inks on parchment. ♥ magic, ♦ bow, ♠ sword, ♣ manilha pile. */
+.suit-hearts {
+    color: #be3144;
+}
+
 .suit-diamonds {
-  color: #e03131;
+    color: #b06e14;
 }
 
 .suit-spades {
-  color: #212529;
+    color: #759ac9;
 }
 
 .suit-clubs {
-  color: #2b8a3e;
+    color: #2e6b3e;
+}
+
+/* --- backs -------------------------------------------------------------------- */
+
+.card.card-back {
+    background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.06) 0 6px, transparent 6px 12px), linear-gradient(180deg, #35415c, #232c42);
+    border-color: #1b2233;
+    box-shadow:
+        inset 0 0 0 3px #35415c,
+        inset 0 0 0 4px #4a5878,
+        0 2px 6px rgba(0, 0, 0, 0.4);
+    color: #8fa3cc;
+}
+
+.card-back-emblem {
+    font-size: 22px;
+    opacity: 0.85;
+}
+
+.card.small .card-back-emblem {
+    font-size: 15px;
+}
+
+.card.pile-empty {
+    background: transparent;
+    border: 1px dashed var(--line);
+    box-shadow: none;
+}
+
+/* --- interactive cards (hand) --------------------------------------------------- */
+
+button.card {
+    cursor: pointer;
+}
+
+button.card:hover:not(:disabled) {
+    transform: translateY(-6px);
+}
+
+.card.selected {
+    transform: translateY(-10px);
+    box-shadow:
+        inset 0 0 0 3px var(--parchment),
+        inset 0 0 0 4px #d6c9a8,
+        0 0 0 2px var(--gold),
+        0 6px 16px rgba(0, 0, 0, 0.5);
 }
 
 .hand-zone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
+    width: 100%;
+    max-width: 1060px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 16px 16px;
 }
 
-.hand-zone h3 {
-  font-size: 15px;
-  color: var(--muted);
+.hand-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.hand-meta h3 {
+    font-size: 16px;
+    color: var(--ink-light);
 }
 
 .hand {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .self-pick {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+/* --- piles & manilha cluster ------------------------------------------------------ */
+
+.pile-cluster {
+    display: flex;
+    gap: 14px;
+    align-items: flex-end;
+}
+
+.pile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.pile.as-button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.pile.as-button:hover .card {
+    transform: translateY(-3px);
+}
+
+.pile-cards {
+    position: relative;
+}
+
+/* Suggest a stack under face-down piles. */
+.pile-cards .card-back {
+    box-shadow:
+        inset 0 0 0 3px #35415c,
+        inset 0 0 0 4px #4a5878,
+        3px 3px 0 -1px #141a29,
+        5px 5px 0 -2px #10151f,
+        0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.pile-label {
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.pile-label b {
+    color: var(--ink-light);
+}
+
+.manilha-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.manilha-panel h3 {
+    font-size: 14px;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.manilha-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.manilha-slot .card:not(.pile-empty):not(.card-back) {
+    box-shadow:
+        inset 0 0 0 3px var(--parchment),
+        inset 0 0 0 4px #d6c9a8,
+        0 0 0 1px var(--gold),
+        0 0 14px rgba(217, 164, 65, 0.35);
+}
+
+.manilha-note {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    max-width: 155px;
+}
+
+.manilha-note b {
+    color: var(--gold);
+}
+
+/* --- flip machinery ----------------------------------------------------------------
+   flipCardHTML renders back + front; the front faces the viewer in the final
+   state. Adding .animate to an ancestor (.reveal or .manilha-slot — done by
+   the animation executor in main.js) plays the back → front turn. */
+
+.flip {
+    display: inline-block;
+    perspective: 700px;
+}
+
+.flip-inner {
+    position: relative;
+    display: inline-block;
+    transform-style: preserve-3d;
+}
+
+.flip-face {
+    backface-visibility: hidden;
+}
+
+.flip-front {
+    position: relative;
+    display: inline-block;
+}
+
+.flip-back {
+    position: absolute;
+    inset: 0;
+    transform: rotateY(180deg);
+}
+
+.reveal.animate .flip-inner,
+.manilha-slot.animate .flip-inner {
+    animation: flip-in 560ms ease-out both;
+}
+
+@keyframes flip-in {
+    from {
+        transform: rotateY(-180deg);
+    }
+    to {
+        transform: rotateY(0deg);
+    }
+}
+
+/* --- responsive --------------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+    .card {
+        width: 54px;
+        height: 78px;
+    }
+
+    .card-center {
+        font-size: 24px;
+    }
+
+    .card-center.court {
+        font-size: 27px;
+    }
+
+    .hand {
+        gap: 8px;
+    }
 }

@@ -1,5 +1,7 @@
-/* Global layout, typography, screens, panels, curtain, modal. Placeholder
-   styling for Phase 2 — the real art direction lands in Phase 4. */
+/* Phase 4 art direction — global theme, layout, screens, panels, HUD,
+   curtain, modal. Board pieces live in board.css, cards in cards.css.
+   Palette: night-battlefield backdrop, parchment cards, two banner colors
+   (azure P1, ember P2), gold for the manilha/winner accents. */
 
 * {
   box-sizing: border-box;
@@ -7,20 +9,44 @@
 }
 
 :root {
-  --p0: #3b5bdb;
-  --p0-soft: #bac8ff;
-  --p1: #e8590c;
-  --danger: #fa5252;
-  --ink: #212529;
-  --muted: #495057;
-  --paper: #ffffff;
-  --felt: #e9ecef;
+  /* backdrop */
+  --night-0: #0e1219;
+  --night-1: #182030;
+  --panel: rgba(255, 255, 255, 0.045);
+  --panel-strong: rgba(255, 255, 255, 0.08);
+  --line: rgba(255, 255, 255, 0.12);
+  /* text on dark */
+  --ink-light: #e9e4d6;
+  --muted: #96a0b4;
+  /* players & accents */
+  --p0: #4d7fd6;
+  --p0-soft: #9db9ea;
+  --p1: #d97f35;
+  --p1-soft: #ecb488;
+  --gold: #d9a441;
+  --danger: #e05252;
+  /* parchment (cards) */
+  --parchment: #f4ecd8;
+  --card-ink: #2b2318;
+
+  --serif: Georgia, 'Palatino Linotype', 'Times New Roman', serif;
 }
 
 body {
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  background: var(--felt);
-  color: var(--ink);
+  background:
+    radial-gradient(1200px 700px at 50% -10%, var(--night-1), transparent 70%),
+    var(--night-0);
+  color: var(--ink-light);
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+.brand {
+  font-family: var(--serif);
+  letter-spacing: 0.02em;
 }
 
 .screen {
@@ -28,8 +54,14 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 16px;
+  gap: 12px;
+  padding: 14px 16px 20px;
+}
+
+.screen.game {
+  justify-content: flex-start;
+  max-width: 1120px;
+  margin: 0 auto;
 }
 
 /* --- buttons ------------------------------------------------------------ */
@@ -37,46 +69,56 @@ body {
 button {
   font: inherit;
   padding: 8px 14px;
-  border: 1px solid #adb5bd;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--panel-strong);
+  color: var(--ink-light);
   cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
 }
 
 button:hover:not(:disabled) {
   border-color: var(--muted);
-  background: #f1f3f5;
+  background: rgba(255, 255, 255, 0.14);
 }
 
 button:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 button.primary {
-  background: var(--p0);
-  border-color: var(--p0);
+  background: linear-gradient(180deg, #5a8be0, #3f6cbd);
+  border-color: #6b97e4;
   color: white;
+  font-weight: 600;
 }
 
 button.primary:hover:not(:disabled) {
-  background: #364fc7;
+  background: linear-gradient(180deg, #6b97e4, #4a77c8);
 }
 
 button.selected {
-  outline: 3px solid var(--p0-soft);
-  border-color: var(--p0);
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+  border-color: var(--gold);
+  color: var(--gold);
 }
 
 button.danger {
-  border-color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
   color: var(--danger);
+  background: transparent;
 }
 
 button.danger:hover:not(:disabled) {
-  background: #ffe3e3;
+  background: rgba(224, 82, 82, 0.12);
   border-color: var(--danger);
+}
+
+button.subtle {
+  font-size: 13px;
+  padding: 5px 11px;
 }
 
 .concede-confirm {
@@ -85,6 +127,7 @@ button.danger:hover:not(:disabled) {
   gap: 8px;
   color: var(--danger);
   font-weight: 600;
+  font-size: 14px;
 }
 
 .buttons {
@@ -94,23 +137,63 @@ button.danger:hover:not(:disabled) {
   justify-content: center;
 }
 
-/* --- menu ---------------------------------------------------------------- */
+/* --- menu & lobby --------------------------------------------------------- */
 
 .menu {
   justify-content: center;
 }
 
+.menu-crest {
+  font-size: 40px;
+  color: var(--gold);
+  text-shadow: 0 0 24px rgba(217, 164, 65, 0.4);
+}
+
 .menu h1 {
-  font-size: 44px;
+  font-size: 56px;
+  color: var(--ink-light);
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
 }
 
 .tagline {
   color: var(--muted);
+  font-size: 17px;
 }
 
 .hint {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
+}
+
+.menu-panel {
+  margin-top: 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.menu-divider {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.menu-divider::before,
+.menu-divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--line);
 }
 
 .menu-section {
@@ -118,7 +201,6 @@ button.danger:hover:not(:disabled) {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding-top: 10px;
 }
 
 .join-row {
@@ -129,12 +211,19 @@ button.danger:hover:not(:disabled) {
 .join-row input {
   font: inherit;
   padding: 8px 12px;
-  border: 1px solid #adb5bd;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  width: 130px;
+  width: 154px;
   text-transform: uppercase;
   text-align: center;
   letter-spacing: 2px;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--ink-light);
+}
+
+.join-row input:focus {
+  outline: 2px solid var(--p0);
+  border-color: transparent;
 }
 
 .error {
@@ -143,18 +232,20 @@ button.danger:hover:not(:disabled) {
 }
 
 .room-code {
-  font-size: 40px;
+  font-family: var(--serif);
+  font-size: 44px;
   font-weight: 700;
-  letter-spacing: 8px;
-  background: var(--paper);
-  border: 1px solid #dee2e6;
+  letter-spacing: 10px;
+  color: var(--gold);
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 10px 24px;
+  padding: 10px 18px 10px 28px;
 }
 
 .banner {
   width: 100%;
-  max-width: 960px;
+  max-width: 1280px;
   border-radius: 8px;
   padding: 8px 14px;
   text-align: center;
@@ -162,24 +253,25 @@ button.danger:hover:not(:disabled) {
 }
 
 .banner.warning {
-  background: #fff3bf;
-  border: 1px solid #fab005;
+  background: rgba(217, 164, 65, 0.14);
+  border: 1px solid rgba(217, 164, 65, 0.5);
+  color: #ecd39c;
 }
 
 /* --- HUD ------------------------------------------------------------------ */
 
 .hud {
   width: 100%;
-  max-width: 960px;
+  max-width: 1280px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  background: var(--paper);
-  border: 1px solid #dee2e6;
-  border-radius: 10px;
-  padding: 10px 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 16px;
   font-size: 14px;
 }
 
@@ -187,123 +279,294 @@ button.danger:hover:not(:disabled) {
 .hud-right {
   display: flex;
   align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.hud-stat {
+  color: var(--muted);
+}
+
+.hud-phase {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-light);
+}
+
+.seat-badge {
+  padding: 2px 12px;
+  border-radius: 999px;
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.seat-badge.seat-0 {
+  background: linear-gradient(180deg, var(--p0), #3a63ad);
+}
+
+.seat-badge.seat-1 {
+  background: linear-gradient(180deg, var(--p1), #b0622a);
+}
+
+.status-chip {
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+
+.status-chip.committed {
+  color: var(--gold);
+  border-color: color-mix(in srgb, var(--gold) 60%, transparent);
+  animation: chip-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes chip-pulse {
+  50% {
+    box-shadow: 0 0 10px rgba(217, 164, 65, 0.45);
+  }
+}
+
+/* --- game layout: main column + reference sidebar ---------------------------- */
+
+.game-body {
+  width: 100%;
+  max-width: 1280px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 12px;
+}
+
+.game-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.game-side {
+  width: 250px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  top: 14px;
+}
+
+.game-side .panel {
+  width: 100%;
+}
+
+.side-title {
+  font-size: 13px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Sidebar reveal: tighter than the old center-stage version. */
+.game-side .reveal-cards {
+  gap: 10px;
+}
+
+.game-side .reveal-vs {
+  font-size: 16px;
+}
+
+.game-side .reveal-outcome {
+  font-size: 14px;
+}
+
+.game-side .badges .badge {
+  font-size: 11px;
+}
+
+/* --- suit-cycle reference ------------------------------------------------------ */
+
+.cycle-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.cycle-panel h3 {
+  font-size: 13px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.cycle-triangle {
+  position: relative;
+  width: 110px;
+  height: 92px;
+}
+
+.cycle-corner {
+  position: absolute;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.cycle-corner.corner-top {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.cycle-corner.corner-right {
+  bottom: 0;
+  right: 8px;
+}
+
+.cycle-corner.corner-left {
+  bottom: 0;
+  left: 8px;
+}
+
+/* Board-side suit tints read on the dark panel (card tints are for parchment). */
+.cycle-corner.suit-hearts {
+  color: #e06c75;
+}
+
+.cycle-corner.suit-diamonds {
+  color: #e5b567;
+}
+
+.cycle-corner.suit-spades {
+  color: #c3cddf;
+}
+
+.cycle-arrows {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  color: var(--gold);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+.cycle-note {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  max-width: 200px;
+}
+
+@media (max-width: 1120px) {
+  .game-body {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .game-side {
+    position: static;
+    width: 100%;
+    max-width: 1060px;
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .game-side .panel,
+  .game-side .cycle-panel {
+    flex: 1;
+  }
+}
+
+/* --- table ------------------------------------------------------------------ */
+
+.table {
+  width: 100%;
+  max-width: 1060px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 10px 14px 12px;
+}
+
+.opponent-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.seat-badge {
-  padding: 2px 10px;
-  border-radius: 999px;
-  color: white;
-  font-weight: 600;
-}
-
-.seat-badge.seat-0 {
-  background: var(--p0);
-}
-
-.seat-badge.seat-1 {
-  background: var(--p1);
-}
-
-/* --- table & panels -------------------------------------------------------- */
-
-.table {
+.opponent-id {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 10px;
   flex-wrap: wrap;
-  justify-content: center;
 }
+
+.opponent-hand {
+  display: flex;
+  gap: 4px;
+}
+
+/* Fan the opponent's backs slightly so they read as a held hand. */
+.opponent-hand .card {
+  margin-left: -18px;
+}
+
+.opponent-hand .card:first-child {
+  margin-left: 0;
+}
+
+.table-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* --- panels ------------------------------------------------------------------ */
 
 .panel {
   width: 100%;
-  max-width: 960px;
-  background: var(--paper);
-  border: 1px solid #dee2e6;
-  border-radius: 10px;
-  padding: 12px 16px;
+  max-width: 1060px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 16px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .instructions {
   color: var(--muted);
   text-align: center;
+  font-size: 14px;
 }
-
-.manilha-panel {
-  background: var(--paper);
-  border: 1px solid #dee2e6;
-  border-radius: 10px;
-  padding: 10px 14px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  min-width: 150px;
-}
-
-.manilha-note {
-  font-size: 13px;
-  color: var(--muted);
-  text-align: center;
-  max-width: 140px;
-}
-
-/* --- reveal ---------------------------------------------------------------- */
-
-.reveal {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.reveal-cards {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.reveal-side {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.reveal-label,
-.reveal-vs {
-  font-weight: 700;
-  color: var(--muted);
-}
-
-.reveal-value {
-  font-weight: 700;
-}
-
-.reveal-outcome {
-  font-weight: 600;
-}
-
-.badges {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.badge {
-  background: #fff3bf;
-  border: 1px solid #fab005;
-  border-radius: 999px;
-  padding: 2px 10px;
-  font-size: 12px;
-}
-
-/* --- action zone ------------------------------------------------------------ */
 
 .option-row {
   display: flex;
@@ -319,8 +582,8 @@ button.danger:hover:not(:disabled) {
 }
 
 .open-play {
-  background: #ffe3e3;
-  border: 1px solid var(--danger);
+  background: rgba(224, 82, 82, 0.12);
+  border: 1px solid color-mix(in srgb, var(--danger) 60%, transparent);
   border-radius: 8px;
   padding: 8px 12px;
   display: flex;
@@ -328,40 +591,175 @@ button.danger:hover:not(:disabled) {
   gap: 8px;
   flex-wrap: wrap;
   justify-content: center;
+  font-size: 14px;
+}
+
+.open-play strong {
+  color: var(--danger);
 }
 
 .game-over {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
+  padding: 8px 0;
+}
+
+.game-over h2 {
+  font-size: 26px;
+  text-align: center;
+}
+
+/* --- reveal panel -------------------------------------------------------------- */
+
+.reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.reveal-cards {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.reveal-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.reveal-label {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.reveal-side.side-p0 .reveal-label {
+  color: var(--p0-soft);
+}
+
+.reveal-side.side-p1 .reveal-label {
+  color: var(--p1-soft);
+}
+
+.reveal-side.winner .reveal-label::after {
+  content: ' ♛';
+  color: var(--gold);
+}
+
+.reveal-side.winner .card {
+  box-shadow:
+    0 0 0 2px var(--gold),
+    0 0 22px rgba(217, 164, 65, 0.55);
+}
+
+.reveal-vs {
+  font-size: 22px;
+  color: var(--muted);
+}
+
+.breakdown {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.breakdown b {
+  color: var(--ink-light);
+  font-size: 15px;
+}
+
+.breakdown em {
+  font-style: normal;
+  color: var(--gold);
+}
+
+.reveal-outcome {
+  font-family: var(--serif);
+  font-size: 17px;
+  text-align: center;
+}
+
+.badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.badge {
+  background: rgba(217, 164, 65, 0.14);
+  border: 1px solid rgba(217, 164, 65, 0.5);
+  color: #ecd39c;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+/* Reveal choreography: one .animate class on .reveal drives the whole
+   sequence — simultaneous card flips, then breakdown, then outcome. The
+   flip keyframes live in cards.css; delays are choreographed here. */
+.reveal.animate .breakdown {
+  animation: fade-up 300ms ease 620ms both;
+}
+
+.reveal.animate .badges,
+.reveal.animate .reveal-outcome {
+  animation: fade-up 320ms ease 760ms both;
+}
+
+.reveal.animate .reveal-side.winner .card {
+  animation: winner-glow 420ms ease 700ms both;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes winner-glow {
+  from {
+    box-shadow: none;
+  }
+  to {
+    box-shadow:
+      0 0 0 2px var(--gold),
+      0 0 22px rgba(217, 164, 65, 0.55);
+  }
 }
 
 /* --- curtain ------------------------------------------------------------------ */
 
 .curtain {
   justify-content: center;
-  background: #343a40;
+  background: var(--night-0);
 }
 
 .curtain-panel {
-  background: #495057;
-  color: white;
-  border-radius: 14px;
-  padding: 28px;
-  max-width: 620px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink-light);
+  border-radius: 16px;
+  padding: 28px 32px;
+  max-width: 640px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16px;
   text-align: center;
-}
-
-.curtain-panel .reveal {
-  background: var(--paper);
-  color: var(--ink);
-  border-radius: 10px;
-  padding: 12px 16px;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.5);
 }
 
 /* --- modal ----------------------------------------------------------------------- */
@@ -369,24 +767,27 @@ button.danger:hover:not(:disabled) {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(5, 8, 12, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
+  z-index: 10;
 }
 
 .modal {
-  background: var(--paper);
-  border-radius: 12px;
-  padding: 20px;
-  max-width: 660px;
+  background: var(--night-1);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px 24px;
+  max-width: 680px;
   max-height: 80vh;
   overflow: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.55);
 }
 
 .graveyard-cards {
@@ -394,4 +795,16 @@ button.danger:hover:not(:disabled) {
   gap: 6px;
   flex-wrap: wrap;
   justify-content: center;
+}
+
+/* --- accessibility ----------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
