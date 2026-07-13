@@ -21,12 +21,18 @@ import { newGame, dispatch, getState, subscribe, nextSeat, buildModel, buildView
 import { renderApp } from './render.js';
 import { buildAnimationPlan } from './animate.js';
 import { createConnection } from './net.js';
+import { nextLanguage } from './i18n.js';
 
 const app = document.querySelector('#app');
 const SESSION_KEY = 'truque-session';
 const SUITS_KEY = 'truque-fantasy-suits'; // localStorage: survives across games
+const LANG_KEY = 'truque-lang'; // localStorage: survives across games
 const HOTSEAT_ENABLED = new URLSearchParams(location.search).has('hotseat');
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+// First run: honor a stored choice, else guess from the browser locale.
+const initialLang =
+  localStorage.getItem(LANG_KEY) ?? (navigator.language?.startsWith('pt') ? 'pt' : 'en');
 
 const ui = {
   curtain: false,
@@ -34,8 +40,10 @@ const ui = {
   offset: null, // winner-move choice
   push: 0, // K push choice
   graveyardOpen: false,
+  rulesOpen: false, // floating rules popup
   concedeArmed: false, // first concede click; the HUD asks for confirmation
   fantasySuits: localStorage.getItem(SUITS_KEY) === '1', // ♠♦♥♣ vs 🗡🏹🔮💀
+  lang: initialLang, // UI language; see i18n.js
 };
 
 let mode = 'menu'; // 'menu' | 'hotseat' | 'online'
@@ -153,6 +161,19 @@ function onClick(event) {
     case 'toggle-suits':
       ui.fantasySuits = !ui.fantasySuits;
       localStorage.setItem(SUITS_KEY, ui.fantasySuits ? '1' : '0');
+      rerender();
+      break;
+    case 'cycle-lang':
+      ui.lang = nextLanguage(ui.lang);
+      localStorage.setItem(LANG_KEY, ui.lang);
+      rerender();
+      break;
+    case 'open-rules':
+      ui.rulesOpen = true;
+      rerender();
+      break;
+    case 'close-rules':
+      ui.rulesOpen = false;
       rerender();
       break;
     case 'open-graveyard':
@@ -358,7 +379,13 @@ function onHotseatStateChange(state) {
 function currentModel() {
   if (mode === 'online') {
     if (!online.view) {
-      return { screen: 'lobby', roomCode: online.roomCode, connection: online.connection };
+      return {
+        screen: 'lobby',
+        roomCode: online.roomCode,
+        connection: online.connection,
+        lang: ui.lang,
+        rulesOpen: ui.rulesOpen,
+      };
     }
     return buildViewModel(online.view, ui, {
       online: true,
@@ -370,7 +397,13 @@ function currentModel() {
     const displaySeat = ui.curtain ? pendingSeat : (seat ?? 0);
     return buildModel(getState(), displaySeat, ui);
   }
-  return { screen: 'menu', hotseatEnabled: HOTSEAT_ENABLED, error: menuError };
+  return {
+    screen: 'menu',
+    hotseatEnabled: HOTSEAT_ENABLED,
+    error: menuError,
+    lang: ui.lang,
+    rulesOpen: ui.rulesOpen,
+  };
 }
 
 /** Instant re-render for UI-only changes (selections, modals, banners). */

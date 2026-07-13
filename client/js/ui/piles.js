@@ -6,7 +6,7 @@
 
 import { cardBackHTML, cardHTML } from './card.js';
 
-export function pilesHTML(view) {
+export function pilesHTML(view, t) {
   const top = view.graveyard.at(-1);
   const graveTop = top
     ? cardHTML(top, { small: true })
@@ -15,11 +15,11 @@ export function pilesHTML(view) {
     <div class="pile-cluster">
       <div class="pile">
         <div class="pile-cards">${view.playDeckCount > 0 ? cardBackHTML({ small: true }) : '<span class="card small pile-empty"></span>'}</div>
-        <span class="pile-label">Deck <b>${view.playDeckCount}</b></span>
+        <span class="pile-label">${t('piles.deck')} <b>${view.playDeckCount}</b></span>
       </div>
       <button type="button" class="pile as-button" data-action="open-graveyard">
         <div class="pile-cards">${graveTop}</div>
-        <span class="pile-label">Graveyard <b>${view.graveyard.length}</b></span>
+        <span class="pile-label">${t('piles.graveyard')} <b>${view.graveyard.length}</b></span>
       </button>
     </div>`;
 }

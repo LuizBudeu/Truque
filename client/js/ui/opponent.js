@@ -6,20 +6,20 @@
 
 import { cardBackHTML } from './card.js';
 
-export function opponentHTML(view, { online = false } = {}) {
-  const name = online ? 'Opponent' : `Player ${2 - view.playerIndex}`;
+export function opponentHTML(view, { t, online = false } = {}) {
+  const name = online ? t('player.opponent') : t('player.n', { n: 2 - view.playerIndex });
   const backs = Array.from({ length: view.opponentHandCount }, () =>
     cardBackHTML({ small: true }),
   ).join('');
   const committed =
     view.phase === 'PICK_CARDS' && view.opponentCommitted
-      ? '<span class="status-chip committed">Card committed</span>'
+      ? `<span class="status-chip committed">${t('chip.committed')}</span>`
       : '';
   return `
     <div class="opponent-row">
       <div class="opponent-id">
         <span class="seat-badge seat-${1 - view.playerIndex}">${name}</span>
-        <span class="status-chip">Swaps left ${view.swapsRemaining[1 - view.playerIndex]}</span>
+        <span class="status-chip">${t('chip.swapsLeft', { n: view.swapsRemaining[1 - view.playerIndex] })}</span>
         ${committed}
       </div>
       <div class="opponent-hand">${backs}</div>

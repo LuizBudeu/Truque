@@ -15,9 +15,14 @@
  * labels ("You" vs "Player N"), enables the waiting states for the
  * simultaneous phases (online both seats render at once; hotseat only ever
  * renders the seat that must act), and shows connection banners.
+ *
+ * All copy comes from i18n.js: renderApp resolves the active language into a
+ * bound `t(key, params)` and threads it into every sub-renderer, so no literal
+ * UI string lives in this module.
  */
 
 import { DANGER_SPACES } from "../../shared/rules.js";
+import { createTranslator, DEFAULT_LANG, languageMeta } from "./i18n.js";
 import { boardHTML } from "./ui/board.js";
 import { handHTML } from "./ui/hand.js";
 import { hudHTML } from "./ui/hud.js";
@@ -28,39 +33,67 @@ import { revealHTML } from "./ui/reveal.js";
 import { suitCycleHTML } from "./ui/cycle.js";
 import { graveyardHTML } from "./ui/graveyard.js";
 import { cardHTML } from "./ui/card.js";
+import { helpFabHTML, rulesModalHTML } from "./ui/rules.js";
 
 export function renderApp(model) {
-    if (model.screen === "menu") return menuHTML(model);
-    if (model.screen === "lobby") return lobbyHTML(model);
-    if (model.ui.curtain) return curtainHTML(model);
-    return gameHTML(model);
+    const t = createTranslator(model.lang ?? model.ui?.lang ?? DEFAULT_LANG);
+    const lang = model.lang ?? model.ui?.lang ?? DEFAULT_LANG;
+    const chrome = chromeHTML(model, t, lang);
+    if (model.screen === "menu") return menuHTML(model, t, lang) + chrome;
+    if (model.screen === "lobby") return lobbyHTML(model, t) + chrome;
+    if (model.ui?.curtain) return curtainHTML(model, t); // full-screen handoff, no chrome
+    return gameHTML(model, t) + chrome;
 }
 
-function menuHTML(model) {
+/** The always-available help FAB (+ its modal when open). Not on the curtain. */
+function chromeHTML(model, t, lang) {
+    const rulesOpen = model.ui?.rulesOpen ?? model.rulesOpen;
+    return `${helpFabHTML(t)}${rulesOpen ? rulesModalHTML(t) : ""}`;
+}
+
+/**
+ * A language chip that cycles through LANGUAGES on click (so a third language
+ * needs no code change). Shows the CURRENT language's short label.
+ */
+function langToggleHTML(t, lang) {
+    const meta = languageMeta(lang);
+    return `<button type="button" class="subtle lang-toggle" data-action="cycle-lang"
+              title="${t("lang.title", { name: meta.name })}">🌐 ${meta.label}</button>`;
+}
+
+/** "You" online (the other seat is elsewhere); "Player N" in hotseat/labels. */
+function playerName(t, index, youIndex, online) {
+    if (index === youIndex) return t("player.you");
+    if (online) return t("player.opponent");
+    return t("player.n", { n: index + 1 });
+}
+
+function menuHTML(model, t, lang) {
     const hotseat = model.hotseatEnabled
         ? `
       <div class="menu-section">
-        <button type="button" data-action="new-game">New hotseat game</button>
-        <p class="hint">Two players, one device — debugging mode.</p>
+        <button type="button" data-action="new-game">${t("menu.newHotseat")}</button>
+        <p class="hint">${t("menu.hotseatHint")}</p>
       </div>`
         : "";
     return `
     <div class="screen menu">
+      <div class="top-controls">${langToggleHTML(t, lang)}</div>
       <div class="menu-crest">⚔</div>
       <h1>Truqué</h1>
-      <p class="tagline">Push your opponent off the board.</p>
+      <p class="tagline">${t("menu.tagline")}</p>
       ${model.error ? `<p class="error">${model.error}</p>` : ""}
       <div class="menu-panel">
         <div class="menu-section">
-          <button type="button" class="primary" data-action="create-room">Create room</button>
-          <p class="hint">You'll get a short code to share with your opponent.</p>
+          <button type="button" class="primary" data-action="create-room">${t("menu.createRoom")}</button>
+          <p class="hint">${t("menu.createHint")}</p>
         </div>
-        <div class="menu-divider">or</div>
+        <div class="menu-divider">${t("menu.or")}</div>
         <div class="menu-section">
           <div class="join-row">
-            <input id="join-code" type="text" maxlength="6" placeholder="Room code"
+            <input id="join-code" type="text" maxlength="6" placeholder="${t("menu.roomCodePlaceholder")}"
                    autocomplete="off" autocapitalize="characters" spellcheck="false" />
-            <button type="button" class="primary" data-action="join-room">Join room</button>
+            <button type="button" class="primary" data-action="join-room">${t("menu.joinRoom")}</button>
           </div>
         </div>
         ${hotseat}
@@ -69,18 +102,18 @@ function menuHTML(model) {
 }
 
 /** Online waiting room: show the join code until the second player arrives. */
-function lobbyHTML(model) {
-    const status = model.connection === "open" ? "Waiting for your opponent to join…" : "Connecting to the server…";
+function lobbyHTML(model, t) {
+    const status = model.connection === "open" ? t("lobby.waiting") : t("lobby.connecting");
     return `
     <div class="screen menu lobby">
       <div class="menu-crest">⚔</div>
       <h1>Truqué</h1>
-      <p class="tagline">Room code</p>
+      <p class="tagline">${t("lobby.roomCode")}</p>
       <p class="room-code">${model.roomCode ?? "····"}</p>
-      <p class="hint">Share this code — the game starts when your opponent joins.</p>
+      <p class="hint">${t("lobby.shareHint")}</p>
       <p class="instructions">${status}</p>
       <div class="buttons">
-        <button type="button" data-action="leave-room">Cancel</button>
+        <button type="button" data-action="leave-room">${t("common.cancel")}</button>
       </div>
     </div>`;
 }
@@ -90,105 +123,109 @@ function lobbyHTML(model) {
  * information (the last round's result) so the previous player can hand the
  * device over without leaking the next player's hand.
  */
-function curtainHTML(model) {
+function curtainHTML(model, t) {
     const { view, seat } = model;
-    const result = view.lastResolution ? `<h3>Last round</h3>${revealHTML(view.lastResolution)}` : "";
+    const labels = [0, 1].map((i) => playerName(t, i, null, false));
+    const result = view.lastResolution
+        ? `<h3>${t("curtain.lastRound")}</h3>${revealHTML(view.lastResolution, { t, labels })}`
+        : "";
     return `
     <div class="screen curtain${model.ui.fantasySuits ? " theme-fantasy" : ""}">
       <div class="curtain-panel">
         ${result}
-        <h2>Pass the device to Player ${seat + 1}</h2>
-        <button type="button" class="primary" data-action="continue">I'm Player ${seat + 1} — continue</button>
+        <h2>${t("curtain.pass", { n: seat + 1 })}</h2>
+        <button type="button" class="primary" data-action="continue">${t("curtain.continue", { n: seat + 1 })}</button>
       </div>
     </div>`;
 }
 
-function gameHTML(model) {
+function gameHTML(model, t) {
     const { view, ui } = model;
     const over = view.phase === "GAME_OVER";
-    const revealLabels = model.online ? (view.playerIndex === 0 ? ["You", "Opponent"] : ["Opponent", "You"]) : ["Player 1", "Player 2"];
+    const youIndex = model.online ? view.playerIndex : null;
+    const labels = [0, 1].map((i) => playerName(t, i, youIndex, model.online));
+    const lang = ui.lang ?? DEFAULT_LANG;
     // The last round lives in the sidebar (with the suit-cycle reference), not
     // center stage: the board and the action zone are what the player scans.
     const sidebar = `
       <aside class="game-side">
-        ${view.lastResolution ? `<section class="panel reveal-panel"><h3 class="side-title">Last round</h3>${revealHTML(view.lastResolution, revealLabels, { small: true })}</section>` : ""}
-        ${suitCycleHTML()}
+        ${view.lastResolution ? `<section class="panel reveal-panel"><h3 class="side-title">${t("side.lastRound")}</h3>${revealHTML(view.lastResolution, { t, labels, youIndex, small: true })}</section>` : ""}
+        ${suitCycleHTML(t)}
       </aside>`;
     return `
     <div class="screen game${ui.fantasySuits ? " theme-fantasy" : ""}">
-      ${hudHTML(view, { concede: !over, concedeArmed: ui.concedeArmed, fantasy: !!ui.fantasySuits })}
-      ${connectionBannerHTML(model)}
+      ${hudHTML(view, { t, lang, concede: !over, concedeArmed: ui.concedeArmed, fantasy: !!ui.fantasySuits })}
+      ${connectionBannerHTML(model, t)}
       <div class="game-body">
         <div class="game-main">
           <section class="table">
-            ${opponentHTML(view, { online: model.online })}
+            ${opponentHTML(view, { t, online: model.online })}
             <div class="table-center">
-              ${pilesHTML(view)}
-              ${boardHTML(view)}
-              ${manilhaHTML(view)}
+              ${pilesHTML(view, t)}
+              ${boardHTML(view, t)}
+              ${manilhaHTML(view, t)}
             </div>
           </section>
-          <section class="panel action-zone">${actionZoneHTML(model)}</section>
-          ${over ? "" : handHTML(view, ui, { online: model.online })}
+          <section class="panel action-zone">${actionZoneHTML(model, t)}</section>
+          ${over ? "" : handHTML(view, ui, { t, online: model.online })}
         </div>
         ${sidebar}
       </div>
-      ${ui.graveyardOpen ? graveyardHTML(view) : ""}
+      ${ui.graveyardOpen ? graveyardHTML(view, t) : ""}
     </div>`;
 }
 
 /** Online-only: surface a lost server connection or an absent opponent. */
-function connectionBannerHTML(model) {
+function connectionBannerHTML(model, t) {
     if (!model.online) return "";
     if (model.connection !== "open") {
-        return '<div class="banner warning">Connection lost — reconnecting…</div>';
+        return `<div class="banner warning">${t("banner.connectionLost")}</div>`;
     }
     if (!model.opponentConnected) {
-        return '<div class="banner warning">Your opponent disconnected — waiting for them to return…</div>';
+        return `<div class="banner warning">${t("banner.opponentDisconnected")}</div>`;
     }
     return "";
 }
 
-function actionZoneHTML(model) {
+function actionZoneHTML(model, t) {
     switch (model.view.phase) {
         case "SWAP_WINDOW":
-            return swapZoneHTML(model);
+            return swapZoneHTML(model, t);
         case "PICK_CARDS":
-            return pickZoneHTML(model);
+            return pickZoneHTML(model, t);
         case "WINNER_MOVE":
-            return moveZoneHTML(model);
+            return moveZoneHTML(model, t);
         case "GAME_OVER":
-            return gameOverHTML(model);
+            return gameOverHTML(model, t);
         default:
             return "";
     }
 }
 
 /** "You" online (the other seat is elsewhere); "Player N" in hotseat. */
-const seatLabel = (model) => (model.online ? "You" : `Player ${model.seat + 1}`);
+const seatLabel = (model, t) => (model.online ? t("player.you") : t("player.n", { n: model.seat + 1 }));
 
 /** Rulebook 2.10: swap any number of cards within the per-game budget, or pass. */
-function swapZoneHTML(model) {
+function swapZoneHTML(model, t) {
     const { view, seat, ui } = model;
     if (view.swapDone[seat]) {
-        return '<p class="instructions">Swap window closed — waiting for your opponent…</p>';
+        return `<p class="instructions">${t("swap.closed")}</p>`;
     }
     const remaining = view.swapsRemaining[seat];
     const count = ui.selected.length;
     const canSwap = count >= 1 && count <= remaining;
     return `
     <p class="instructions">
-      ${seatLabel(model)}: select cards to swap (${remaining} left this game) or keep your hand.
-      Swapped cards are revealed to the graveyard.
+      ${t("swap.instructions", { seat: seatLabel(model, t), remaining })}
     </p>
     <div class="buttons">
-      <button type="button" data-action="swap-selected"${canSwap ? "" : " disabled"}>Swap selected (${count})</button>
-      <button type="button" class="primary" data-action="skip-swap">Done — keep hand</button>
+      <button type="button" data-action="swap-selected"${canSwap ? "" : " disabled"}>${t("swap.selected", { n: count })}</button>
+      <button type="button" class="primary" data-action="skip-swap">${t("swap.done")}</button>
     </div>`;
 }
 
 /** Rulebook 2.4/2.9: secret pick, with the danger-zone open-play messaging. */
-function pickZoneHTML(model) {
+function pickZoneHTML(model, t) {
     const { view, seat } = model;
     const opponent = 1 - seat;
     const selfEndangered = view.positions[seat] === DANGER_SPACES[seat];
@@ -197,13 +234,13 @@ function pickZoneHTML(model) {
 
     if (view.selfCommitted) {
         return `
-      <p class="instructions">Card committed — waiting for your opponent…</p>`;
+      <p class="instructions">${t("pick.committed")}</p>`;
     }
     // Rulebook 2.9: the endangered player picks only after seeing the open card.
     if (openPlay && selfEndangered && !view.openCard) {
         return `
       <div class="open-play">
-        <strong>Danger zone!</strong> Your opponent must play openly first — waiting for their card…
+        <strong>${t("pick.dangerTitle")}</strong> ${t("pick.openWaiting")}
       </div>`;
     }
 
@@ -211,42 +248,41 @@ function pickZoneHTML(model) {
     if (view.openCard) {
         notice = `
       <div class="open-play">
-        <strong>Danger zone!</strong> Your opponent had to play openly:
+        <strong>${t("pick.dangerTitle")}</strong> ${t("pick.openRevealed")}
         ${cardHTML(view.openCard, { small: true })}
       </div>`;
     } else if (openPlay && opponentEndangered) {
         notice = `
       <div class="open-play">
-        <strong>Your opponent is in danger.</strong> You must play openly — they
-        will see your card before picking theirs.
+        <strong>${t("pick.opponentInDangerTitle")}</strong> ${t("pick.opponentInDangerBody")}
       </div>`;
     }
 
     const canPlay = model.ui.selected.length === 1;
     return `
     ${notice}
-    <p class="instructions">${seatLabel(model)}: choose a card to play. It stays secret until both are committed.</p>
+    <p class="instructions">${t("pick.instructions", { seat: seatLabel(model, t) })}</p>
     <div class="buttons">
-      <button type="button" class="primary" data-action="play-card"${canPlay ? "" : " disabled"}>Play selected card</button>
+      <button type="button" class="primary" data-action="play-card"${canPlay ? "" : " disabled"}>${t("pick.play")}</button>
     </div>`;
 }
 
 /** Winner's move: optional K push amount plus the advance/retreat choice. */
-function moveZoneHTML(model) {
+function moveZoneHTML(model, t) {
     const { seat, ui, move } = model;
-    if (!move) return '<p class="instructions">Waiting for the round winner…</p>';
+    if (!move) return `<p class="instructions">${t("move.waiting")}</p>`;
 
     const pushRow = move.pushes
         ? `
       <div class="option-row">
-        <span class="option-label">Push opponent (K):</span>
+        <span class="option-label">${t("move.push")}</span>
         ${move.pushes.map((v) => `<button type="button" data-action="select-push" data-value="${v}" class="${ui.push === v ? "selected" : ""}">${v}</button>`).join("")}
       </div>`
         : "";
 
     const offsetRow = move.offsets
         .map((o) => {
-            const label = o.value > 0 ? `Advance ${o.value}` : o.value < 0 ? `Retreat ${-o.value}` : "Stay";
+            const label = o.value > 0 ? t("move.advance", { n: o.value }) : o.value < 0 ? t("move.retreat", { n: -o.value }) : t("move.stay");
             const selected = ui.offset === o.value ? " selected" : "";
             return `<button type="button" data-action="select-offset" data-value="${o.value}" class="option${selected}"${o.legal ? "" : " disabled"}>${label}</button>`;
         })
@@ -255,37 +291,39 @@ function moveZoneHTML(model) {
     const chosen = move.offsets.find((o) => o.value === ui.offset);
     const canConfirm = chosen !== undefined && chosen.legal;
     const intro = model.online
-        ? `You won the round — choose your move (up to ${move.range} either way).`
-        : `Player ${seat + 1}, you won the round — choose your move (up to ${move.range} either way).`;
+        ? t("move.introYou", { range: move.range })
+        : t("move.introSeat", { n: seat + 1, range: move.range });
     return `
     <p class="instructions">${intro}</p>
     ${pushRow}
     <div class="option-row">${offsetRow}</div>
     <div class="buttons">
-      <button type="button" class="primary" data-action="confirm-move"${canConfirm ? "" : " disabled"}>Confirm move</button>
+      <button type="button" class="primary" data-action="confirm-move"${canConfirm ? "" : " disabled"}>${t("move.confirm")}</button>
     </div>`;
 }
 
-function gameOverHTML(model) {
+function gameOverHTML(model, t) {
     const { view, seat } = model;
     const conceded = view.concededBy !== null && view.concededBy !== undefined;
     let message;
     if (view.winner === "draw") {
-        message = "Both players were pushed out — the game is a draw!";
+        message = t("over.draw");
     } else if (model.online) {
         if (conceded) {
-            message = view.winner === seat ? "Your opponent conceded — you win the game!" : "You conceded — your opponent wins the game.";
+            message = view.winner === seat ? t("over.onlineConcededWin") : t("over.onlineConcededLose");
         } else {
-            message = view.winner === seat ? "You win the game!" : "You lose — your opponent wins the game.";
+            message = view.winner === seat ? t("over.onlineWin") : t("over.onlineLose");
         }
     } else {
-        message = conceded ? `Player ${view.concededBy + 1} conceded — Player ${view.winner + 1} wins the game!` : `Player ${view.winner + 1} wins the game!`;
+        message = conceded
+            ? t("over.hotseatConceded", { conceder: view.concededBy + 1, winner: view.winner + 1 })
+            : t("over.hotseatWin", { winner: view.winner + 1 });
     }
     // Rematch is hotseat-only for now (online rematch is Phase 5 polish).
     const buttons = model.online
-        ? '<button type="button" class="primary" data-action="leave-room">Back to menu</button>'
-        : `<button type="button" class="primary" data-action="rematch">Rematch</button>
-        <button type="button" data-action="menu">Back to menu</button>`;
+        ? `<button type="button" class="primary" data-action="leave-room">${t("common.backToMenu")}</button>`
+        : `<button type="button" class="primary" data-action="rematch">${t("over.rematch")}</button>
+        <button type="button" data-action="menu">${t("common.backToMenu")}</button>`;
     return `
     <div class="game-over">
       <h2>${message}</h2>

@@ -7,7 +7,7 @@
 
 import { suitGlyphHTML } from './card.js';
 
-export function suitCycleHTML() {
+export function suitCycleHTML(t) {
   // Inline SVG under the corner glyphs: one curved "beats" arrow per edge,
   // clockwise ♥→♦, ♦→♠, ♠→♥. Coordinates match the 110×92 .cycle-triangle box
   // (corner glyph centers ≈ top 55,12 · right 91,80 · left 19,80).
@@ -25,13 +25,13 @@ export function suitCycleHTML() {
         </svg>`;
   return `
     <div class="cycle-panel">
-      <h3>Suit order</h3>
+      <h3>${t('cycle.title')}</h3>
       <div class="cycle-triangle">
         ${arrows}
         <span class="cycle-corner corner-top suit-hearts">${suitGlyphHTML('hearts')}</span>
         <span class="cycle-corner corner-right suit-diamonds">${suitGlyphHTML('diamonds')}</span>
         <span class="cycle-corner corner-left suit-spades">${suitGlyphHTML('spades')}</span>
       </div>
-      <p class="cycle-note">Each suit beats the next — breaks ties and rules A duels</p>
+      <p class="cycle-note">${t('cycle.note')}</p>
     </div>`;
 }

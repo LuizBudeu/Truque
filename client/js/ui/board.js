@@ -12,7 +12,7 @@ const signed = (n) => (n > 0 ? `+${n}` : `${n}`);
 const pawnHTML = (player) =>
   `<span class="pawn pawn-p${player}"><span class="pawn-flag">P${player + 1}</span></span>`;
 
-export function boardHTML(view) {
+export function boardHTML(view, t) {
   const [p0, p1] = view.positions;
   const spaces = [];
   for (let i = 0; i < BOARD_SIZE; i++) {
@@ -34,12 +34,12 @@ export function boardHTML(view) {
         <div class="board">${spaces.join('')}</div>
         ${towerR}
       </div>
-      ${buffBarHTML(view.positions)}
+      ${buffBarHTML(view.positions, t)}
     </div>`;
 }
 
 /** Rulebook 2.6, Table 1 — live readout of the distance modifiers. */
-function buffBarHTML(positions) {
+function buffBarHTML(positions, t) {
   const d = distanceBetween(positions);
   const chip = (suit, label) => {
     const mod = distanceModifier(suit, d);
@@ -48,9 +48,9 @@ function buffBarHTML(positions) {
   };
   return `
     <div class="buff-bar">
-      <span class="buff-chip distance">Distance <b>${d}</b></span>
-      ${chip('spades', 'Sword')}
-      ${chip('diamonds', 'Bow')}
-      ${chip('hearts', 'Magic')}
+      <span class="buff-chip distance">${t('buff.distance')} <b>${d}</b></span>
+      ${chip('spades', t('buff.sword'))}
+      ${chip('diamonds', t('buff.bow'))}
+      ${chip('hearts', t('buff.magic'))}
     </div>`;
 }
