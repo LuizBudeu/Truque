@@ -282,6 +282,44 @@ describe('reconnection', () => {
   });
 });
 
+describe('rematch', () => {
+  test('both votes replay the game with the same seats', async (t) => {
+    const { a, b } = await startGame(t);
+    await a.nextOfType('VIEW');
+    await b.nextOfType('VIEW');
+
+    // End the game so a rematch becomes legal.
+    b.send({ type: 'ACTION', action: { type: 'CONCEDE', player: 1 } });
+    assert.equal((await a.nextOfType('VIEW')).view.phase, 'GAME_OVER');
+    assert.equal((await b.nextOfType('VIEW')).view.phase, 'GAME_OVER');
+
+    // One vote just broadcasts the pending state; no new game yet.
+    a.send({ type: 'REQUEST_REMATCH' });
+    assert.deepEqual((await a.nextOfType('REMATCH_STATE')).requested, [true, false]);
+    assert.deepEqual((await b.nextOfType('REMATCH_STATE')).requested, [true, false]);
+
+    // The second vote starts a fresh game for both seats.
+    b.send({ type: 'REQUEST_REMATCH' });
+    assert.deepEqual((await b.nextOfType('REMATCH_STATE')).requested, [false, false]);
+    const replayA = (await a.nextOfType('VIEW')).view;
+    const replayB = (await b.nextOfType('VIEW')).view;
+    assert.equal(replayA.phase, 'SWAP_WINDOW');
+    assert.equal(replayA.round, 1);
+    assert.equal(replayA.playerIndex, 0);
+    assert.equal(replayB.playerIndex, 1);
+    assert.equal(replayA.winner, null);
+  });
+
+  test('a rematch before the game is over is rejected', async (t) => {
+    const { a, b } = await startGame(t);
+    await a.nextOfType('VIEW');
+    await b.nextOfType('VIEW');
+
+    a.send({ type: 'REQUEST_REMATCH' });
+    assert.equal((await a.nextOfType('REJECTED')).reason, 'game is not over');
+  });
+});
+
 describe('static file serving', () => {
   test('serves the client over the same port as the WebSocket', async (t) => {
     const server = await startServer({ port: 0 });

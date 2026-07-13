@@ -231,12 +231,20 @@ _Rationale: debugging rules and networking at the same time is miserable. Rules 
 
 **Done when:** a spectator can follow a round without reading the rules.
 
-### Phase 5 — Polish
+### Phase 5 — Polish _(done)_
 
-- Sound effects (reveal, move, win/lose).
-- Quality of life: swap counter, round log, rematch button, copy-room-link.
-- Responsive layout (desktop first; playable on mobile).
-- Error surfaces: opponent disconnected, room full, invalid code.
+- Sound effects (reveal, move, win/lose) — `client/js/sound.js` synthesizes every
+  cue with WebAudio (zero assets/deps, browser-only leaf module like `net.js`);
+  `main.js` fires them off the animation plan, HUD has a mute toggle persisted in
+  `localStorage`.
+- Quality of life: swap counter (Phase 4) · round-history log (`shared` `history`
+  array → `views.js` → `client/js/ui/log.js` sidebar panel) · online rematch (both
+  seats vote via `REQUEST_REMATCH`/`REMATCH_STATE`; `Room.requestRematch` replays
+  with a new seed) · copy-room-link (lobby button + one-click `?room=CODE` join).
+- Responsive layout: phone breakpoints at 600px across the three CSS files; the
+  12-space board shrinks to fit ~340px and scrolls inside itself below that.
+- Error surfaces: opponent disconnected / connection lost banners, room full,
+  invalid code (all Phase 3, carried through).
 
 **Done when:** the group would happily demo it in class.
 
@@ -281,7 +289,7 @@ _Rationale: debugging rules and networking at the same time is miserable. Rules 
 - [x] Phase 2 — hotseat playable in browser
 - [x] Phase 3 — online play between two machines
 - [x] Phase 4 — visual pass complete
-- [ ] Phase 5 — demo-ready
+- [x] Phase 5 — demo-ready
 
 ## 10. Open rule questions (decision log)
 

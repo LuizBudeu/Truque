@@ -8,6 +8,7 @@
  *   { type: 'JOIN_ROOM', roomCode, playerToken? }  // playerToken rejoins a seat
  *   { type: 'ACTION', action }                     // validated via shared/validation.js
  *   { type: 'RESYNC' }                             // full view after reconnect
+ *   { type: 'REQUEST_REMATCH' }                    // vote to replay once the game is over
  *
  * Server → client:
  *   { type: 'ROOM_CREATED', roomCode, playerToken, playerIndex }
@@ -16,11 +17,12 @@
  *   { type: 'VIEW', view }                         // PlayerView after every accepted action
  *   { type: 'REJECTED', reason }
  *   { type: 'OPPONENT_STATUS', connected }
+ *   { type: 'REMATCH_STATE', requested }           // requested: [bool, bool] by seat
  *
  * Pure module (no Node APIs) so the client can import the vocabulary too.
  */
 
-export const CLIENT_MESSAGES = ['CREATE_ROOM', 'JOIN_ROOM', 'ACTION', 'RESYNC'];
+export const CLIENT_MESSAGES = ['CREATE_ROOM', 'JOIN_ROOM', 'ACTION', 'RESYNC', 'REQUEST_REMATCH'];
 
 export const SERVER_MESSAGES = [
   'ROOM_CREATED',
@@ -29,6 +31,7 @@ export const SERVER_MESSAGES = [
   'VIEW',
   'REJECTED',
   'OPPONENT_STATUS',
+  'REMATCH_STATE',
 ];
 
 /** Anything bigger than this is not a legitimate game message. */

@@ -11,8 +11,9 @@ import { languageMeta } from '../i18n.js';
  * @param {boolean} [options.concede] - show the concede control (game running)
  * @param {boolean} [options.concedeArmed] - first click happened; ask to confirm
  * @param {boolean} [options.fantasy] - fantasy suit glyphs are active
+ * @param {boolean} [options.muted] - sound effects are off
  */
-export function hudHTML(view, { t, lang = 'en', concede = false, concedeArmed = false, fantasy = false } = {}) {
+export function hudHTML(view, { t, lang = 'en', concede = false, concedeArmed = false, fantasy = false, muted = false } = {}) {
   const meta = languageMeta(lang);
   const concedeControls = !concede
     ? ''
@@ -36,6 +37,11 @@ export function hudHTML(view, { t, lang = 'en', concede = false, concedeArmed = 
         <button type="button" class="subtle" data-action="toggle-suits"
                 title="${t('hud.suitsTitle')}">
           ${fantasy ? `♠ ${t('hud.classicSuits')}` : `🗡 ${t('hud.fantasySuits')}`}
+        </button>
+        <button type="button" class="subtle icon-toggle" data-action="toggle-mute"
+                title="${muted ? t('hud.soundOff') : t('hud.soundOn')}"
+                aria-label="${muted ? t('hud.soundOff') : t('hud.soundOn')}">
+          ${muted ? '🔇' : '🔊'}
         </button>
         ${concedeControls}
       </div>

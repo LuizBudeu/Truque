@@ -400,3 +400,41 @@ button.card:hover:not(:disabled) {
         gap: 8px;
     }
 }
+
+@media (max-width: 600px) {
+    .card {
+        width: 46px;
+        height: 66px;
+    }
+
+    .card-center {
+        font-size: 20px;
+    }
+
+    .card-center.court {
+        font-size: 22px;
+    }
+
+    .card-corner {
+        top: 3px;
+        left: 4px;
+        font-size: 12px;
+    }
+
+    .hand {
+        gap: 6px;
+    }
+
+    .hand-zone {
+        padding: 10px 8px 12px;
+    }
+
+    /* Tighten the opponent's fanned backs so a 4-card hand never overflows. */
+    .opponent-hand .card {
+        margin-left: -22px;
+    }
+
+    .pile-cluster {
+        gap: 8px;
+    }
+}

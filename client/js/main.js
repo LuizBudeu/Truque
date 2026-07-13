@@ -21,12 +21,14 @@ import { newGame, dispatch, getState, subscribe, nextSeat, buildModel, buildView
 import { renderApp } from './render.js';
 import { buildAnimationPlan } from './animate.js';
 import { createConnection } from './net.js';
+import { createSound } from './sound.js';
 import { nextLanguage } from './i18n.js';
 
 const app = document.querySelector('#app');
 const SESSION_KEY = 'truque-session';
 const SUITS_KEY = 'truque-fantasy-suits'; // localStorage: survives across games
 const LANG_KEY = 'truque-lang'; // localStorage: survives across games
+const MUTE_KEY = 'truque-muted'; // localStorage: sound on/off preference
 const HOTSEAT_ENABLED = new URLSearchParams(location.search).has('hotseat');
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -44,7 +46,13 @@ const ui = {
   concedeArmed: false, // first concede click; the HUD asks for confirmation
   fantasySuits: localStorage.getItem(SUITS_KEY) === '1', // ♠♦♥♣ vs 🗡🏹🔮💀
   lang: initialLang, // UI language; see i18n.js
+  copied: false, // transient: the invite link was just copied to the clipboard
+  muted: localStorage.getItem(MUTE_KEY) === '1', // sound effects off
 };
+
+// Procedural sound (Phase 5). Cues fire from the animation pump below.
+const sound = createSound();
+sound.setMuted(ui.muted);
 
 let mode = 'menu'; // 'menu' | 'hotseat' | 'online'
 let menuError = null;
@@ -64,6 +72,7 @@ const online = {
   view: null, // last VIEW from the server; null while in the lobby
   opponentConnected: false,
   intent: null, // what to send when the socket (re)opens
+  rematch: { you: false, opponent: false }, // GAME_OVER replay votes
 };
 
 // Animation-queue state — declared before the bootstrap below, which can hit
@@ -77,10 +86,14 @@ app.addEventListener('keydown', (event) => {
   if (event.key === 'Enter' && event.target.id === 'join-code') joinFromInput();
 });
 
-// A refresh mid-game rejoins the saved seat automatically.
+// A refresh mid-game rejoins the saved seat automatically; a shared invite
+// link (?room=CODE) joins that room in one click.
 const savedSession = readSession();
+const invitedRoom = new URLSearchParams(location.search).get('room')?.trim().toUpperCase();
 if (savedSession) {
   goOnline({ roomCode: savedSession.roomCode, playerToken: savedSession.playerToken });
+} else if (invitedRoom) {
+  goOnline({ roomCode: invitedRoom });
 } else {
   rerender();
 }
@@ -100,6 +113,11 @@ function onClick(event) {
     case 'rematch':
       startHotseat();
       break;
+    case 'request-rematch':
+      online.rematch = { ...online.rematch, you: true };
+      net.send({ type: 'REQUEST_REMATCH' });
+      rerender();
+      break;
     case 'menu':
       mode = 'menu';
       clearTransitions();
@@ -113,6 +131,9 @@ function onClick(event) {
       break;
     case 'leave-room':
       leaveOnline();
+      break;
+    case 'copy-link':
+      copyInviteLink();
       break;
     case 'continue': // hotseat curtain
       seat = pendingSeat;
@@ -161,6 +182,12 @@ function onClick(event) {
     case 'toggle-suits':
       ui.fantasySuits = !ui.fantasySuits;
       localStorage.setItem(SUITS_KEY, ui.fantasySuits ? '1' : '0');
+      rerender();
+      break;
+    case 'toggle-mute':
+      ui.muted = !ui.muted;
+      sound.setMuted(ui.muted);
+      localStorage.setItem(MUTE_KEY, ui.muted ? '1' : '0');
       rerender();
       break;
     case 'cycle-lang':
@@ -227,6 +254,46 @@ function resetSelections() {
 // Online mode
 // ---------------------------------------------------------------------------
 
+/** The shareable one-click join URL for the current room. */
+function inviteLink() {
+  return `${location.origin}/client/?room=${online.roomCode}`;
+}
+
+/** Copy the invite link, flashing a "Copied!" confirmation on the button. */
+function copyInviteLink() {
+  if (!online.roomCode) return;
+  const done = () => {
+    ui.copied = true;
+    rerender();
+    setTimeout(() => {
+      ui.copied = false;
+      rerender();
+    }, 1600);
+  };
+  // navigator.clipboard needs a secure context; fall back to a temp textarea.
+  const link = inviteLink();
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(link).then(done, () => legacyCopy(link, done));
+  } else {
+    legacyCopy(link, done);
+  }
+}
+
+function legacyCopy(text, done) {
+  const area = document.createElement('textarea');
+  area.value = text;
+  area.style.position = 'fixed';
+  area.style.opacity = '0';
+  document.body.appendChild(area);
+  area.select();
+  try {
+    document.execCommand('copy');
+    done();
+  } finally {
+    area.remove();
+  }
+}
+
 function joinFromInput() {
   const code = document.querySelector('#join-code')?.value.trim().toUpperCase();
   if (!code) {
@@ -250,6 +317,7 @@ function goOnline(intent) {
   online.playerToken = intent.playerToken ?? null;
   online.view = null;
   online.opponentConnected = false;
+  online.rematch = { you: false, opponent: false };
   clearTransitions();
 
   const url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`;
@@ -290,12 +358,21 @@ function onServerMessage(msg) {
       rerender();
       break;
     case 'VIEW':
+      // A fresh game (first deal or a completed rematch) clears the replay votes.
+      if (msg.view.phase !== 'GAME_OVER') online.rematch = { you: false, opponent: false };
       online.view = msg.view;
       resetSelections();
       transition();
       break;
     case 'OPPONENT_STATUS':
       online.opponentConnected = msg.connected;
+      rerender();
+      break;
+    case 'REMATCH_STATE':
+      online.rematch = {
+        you: msg.requested[online.playerIndex],
+        opponent: msg.requested[1 - online.playerIndex],
+      };
       rerender();
       break;
     case 'REJECTED':
@@ -383,6 +460,7 @@ function currentModel() {
         screen: 'lobby',
         roomCode: online.roomCode,
         connection: online.connection,
+        copied: ui.copied,
         lang: ui.lang,
         rulesOpen: ui.rulesOpen,
       };
@@ -391,6 +469,7 @@ function currentModel() {
       online: true,
       connection: online.connection,
       opponentConnected: online.opponentConnected,
+      rematch: online.rematch,
     });
   }
   if (mode === 'hotseat' && getState()) {
@@ -430,6 +509,19 @@ function clearTransitions() {
 const renderedView = (model) =>
   model && model.screen === 'game' && !model.ui?.curtain ? model.view : null;
 
+/**
+ * The win/lose cue to play when a transition first reaches GAME_OVER, or null.
+ * Online: from the local seat's perspective; hotseat: a neutral flourish.
+ */
+function gameOverCue(prev, next) {
+  const view = next?.view;
+  if (!view || view.phase !== 'GAME_OVER') return null;
+  if (prev?.view?.phase === 'GAME_OVER') return null; // already announced
+  if (view.winner === 'draw') return 'lose';
+  if (next.online) return view.winner === view.playerIndex ? 'win' : 'lose';
+  return 'win';
+}
+
 async function pumpTransitions() {
   if (animating) return;
   animating = true;
@@ -440,6 +532,8 @@ async function pumpTransitions() {
       app.innerHTML = renderApp(lastModel);
       const plan = buildAnimationPlan(renderedView(prev), renderedView(lastModel));
       if (plan.length > 0 && !REDUCED_MOTION.matches) await runPlan(plan);
+      const cue = gameOverCue(prev, lastModel);
+      if (cue) sound.play(cue);
     }
   } finally {
     animating = false;
@@ -456,13 +550,16 @@ async function runPlan(plan) {
     switch (step.type) {
       case 'reveal':
         app.querySelector('.reveal-panel .reveal')?.classList.add('animate');
+        sound.play('reveal');
         await wait(step.duration);
         break;
       case 'manilha-flip':
         app.querySelector('.manilha-slot')?.classList.add('animate');
+        sound.play('manilha');
         await wait(step.duration);
         break;
       case 'pawn-slide':
+        sound.play('move');
         await slidePawns(step);
         break;
     }

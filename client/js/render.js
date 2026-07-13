@@ -31,6 +31,7 @@ import { opponentHTML } from "./ui/opponent.js";
 import { pilesHTML } from "./ui/piles.js";
 import { revealHTML } from "./ui/reveal.js";
 import { suitCycleHTML } from "./ui/cycle.js";
+import { roundLogHTML } from "./ui/log.js";
 import { graveyardHTML } from "./ui/graveyard.js";
 import { cardHTML } from "./ui/card.js";
 import { helpFabHTML, rulesModalHTML } from "./ui/rules.js";
@@ -111,6 +112,11 @@ function lobbyHTML(model, t) {
       <p class="tagline">${t("lobby.roomCode")}</p>
       <p class="room-code">${model.roomCode ?? "····"}</p>
       <p class="hint">${t("lobby.shareHint")}</p>
+      <div class="buttons">
+        <button type="button" class="primary" data-action="copy-link"${model.roomCode ? "" : " disabled"}>
+          ${model.copied ? t("lobby.linkCopied") : t("lobby.copyLink")}
+        </button>
+      </div>
       <p class="instructions">${status}</p>
       <div class="buttons">
         <button type="button" data-action="leave-room">${t("common.cancel")}</button>
@@ -150,11 +156,12 @@ function gameHTML(model, t) {
     const sidebar = `
       <aside class="game-side">
         ${view.lastResolution ? `<section class="panel reveal-panel"><h3 class="side-title">${t("side.lastRound")}</h3>${revealHTML(view.lastResolution, { t, labels, youIndex, small: true })}</section>` : ""}
+        ${roundLogHTML(view, { t, labels, youIndex })}
         ${suitCycleHTML(t)}
       </aside>`;
     return `
     <div class="screen game${ui.fantasySuits ? " theme-fantasy" : ""}">
-      ${hudHTML(view, { t, lang, concede: !over, concedeArmed: ui.concedeArmed, fantasy: !!ui.fantasySuits })}
+      ${hudHTML(view, { t, lang, concede: !over, concedeArmed: ui.concedeArmed, fantasy: !!ui.fantasySuits, muted: !!ui.muted })}
       ${connectionBannerHTML(model, t)}
       <div class="game-body">
         <div class="game-main">
@@ -319,16 +326,38 @@ function gameOverHTML(model, t) {
             ? t("over.hotseatConceded", { conceder: view.concededBy + 1, winner: view.winner + 1 })
             : t("over.hotseatWin", { winner: view.winner + 1 });
     }
-    // Rematch is hotseat-only for now (online rematch is Phase 5 polish).
     const buttons = model.online
-        ? `<button type="button" class="primary" data-action="leave-room">${t("common.backToMenu")}</button>`
+        ? onlineRematchHTML(model, t)
         : `<button type="button" class="primary" data-action="rematch">${t("over.rematch")}</button>
         <button type="button" data-action="menu">${t("common.backToMenu")}</button>`;
     return `
     <div class="game-over">
       <h2>${message}</h2>
+      ${model.online ? rematchNoticeHTML(model, t) : ""}
       <div class="buttons">
         ${buttons}
       </div>
     </div>`;
+}
+
+/** Online: a rematch button (or "waiting" once you've voted) plus leave. */
+function onlineRematchHTML(model, t) {
+    const rematch = model.rematch ?? { you: false, opponent: false };
+    const rematchButton = rematch.you
+        ? `<button type="button" class="primary" disabled>${t("over.rematchWaiting")}</button>`
+        : `<button type="button" class="primary" data-action="request-rematch">${t("over.rematch")}</button>`;
+    return `${rematchButton}
+        <button type="button" data-action="leave-room">${t("common.backToMenu")}</button>`;
+}
+
+/** Online: surface the opponent's pending rematch vote. */
+function rematchNoticeHTML(model, t) {
+    const rematch = model.rematch ?? { you: false, opponent: false };
+    if (rematch.opponent && !rematch.you) {
+        return `<p class="rematch-notice">${t("over.opponentWantsRematch")}</p>`;
+    }
+    if (rematch.you && !rematch.opponent) {
+        return `<p class="instructions">${t("over.rematchAsked")}</p>`;
+    }
+    return "";
 }

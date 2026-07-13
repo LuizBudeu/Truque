@@ -150,6 +150,10 @@ function handleMessage(rooms, createSeed, socket, ctx, msg) {
           // Refresh mid-game: restore this player's view, tell the opponent.
           room.sendTo(playerIndex, { type: 'VIEW', view: room.viewFor(playerIndex) });
           room.sendTo(1 - playerIndex, { type: 'OPPONENT_STATUS', connected: true });
+          // Game over: also restore any pending rematch votes for this seat.
+          if (room.state.phase === 'GAME_OVER') {
+            room.sendTo(playerIndex, { type: 'REMATCH_STATE', requested: [...room.rematchVotes] });
+          }
         } else {
           room.broadcastViews(); // second seat filled — the game starts now
         }
@@ -169,6 +173,21 @@ function handleMessage(rooms, createSeed, socket, ctx, msg) {
       if (!ctx.room) return reject('not in a room');
       if (!ctx.room.state) return reject('game has not started');
       ctx.room.sendTo(ctx.playerIndex, { type: 'VIEW', view: ctx.room.viewFor(ctx.playerIndex) });
+      return;
+    }
+
+    case 'REQUEST_REMATCH': {
+      if (!ctx.room) return reject('not in a room');
+      const result = ctx.room.requestRematch(ctx.playerIndex, createSeed());
+      if (!result.ok) return reject(result.reason);
+      if (result.started) {
+        // Both voted — a fresh game began; send the new views and clear the
+        // rematch prompt on both clients.
+        ctx.room.broadcastRematchState();
+        ctx.room.broadcastViews();
+      } else {
+        ctx.room.broadcastRematchState();
+      }
       return;
     }
   }

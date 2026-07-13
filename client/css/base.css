@@ -121,6 +121,11 @@ button.subtle {
   padding: 5px 11px;
 }
 
+button.icon-toggle {
+  padding: 5px 9px;
+  line-height: 1;
+}
+
 .concede-confirm {
   display: inline-flex;
   align-items: center;
@@ -395,6 +400,93 @@ button.subtle {
   font-size: 11px;
 }
 
+/* --- round-history log ---------------------------------------------------------- */
+
+.log-panel {
+  align-items: stretch;
+}
+
+.round-log {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.log-entry {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.log-entry:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.log-round {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.log-cards {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+
+.log-card {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  font-weight: 700;
+  color: var(--ink-light);
+  opacity: 0.75;
+}
+
+.log-card.won {
+  opacity: 1;
+  color: var(--gold);
+}
+
+.log-vs {
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.log-outcome {
+  color: var(--muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Suit tints on the dark panel (mirrors the buff-bar / cycle inks). */
+.log-card.suit-hearts .suit-glyph {
+  color: #e06c75;
+}
+
+.log-card.suit-diamonds .suit-glyph {
+  color: #e5b567;
+}
+
+.log-card.suit-spades .suit-glyph {
+  color: #c3cddf;
+}
+
+.log-card.won .suit-glyph {
+  color: inherit;
+}
+
 /* --- suit-cycle reference ------------------------------------------------------ */
 
 .cycle-panel {
@@ -610,6 +702,13 @@ button.subtle {
 .game-over h2 {
   font-size: 26px;
   text-align: center;
+}
+
+.rematch-notice {
+  color: var(--gold);
+  font-weight: 600;
+  text-align: center;
+  animation: chip-pulse 1.6s ease-in-out infinite;
 }
 
 /* --- reveal panel -------------------------------------------------------------- */
@@ -898,6 +997,90 @@ button.subtle {
   }
   .help-fab {
     padding: 11px;
+  }
+}
+
+/* --- phones ------------------------------------------------------------------------- */
+
+@media (max-width: 600px) {
+  .screen {
+    padding: 10px 10px 16px;
+    gap: 10px;
+  }
+
+  .hud {
+    padding: 6px 10px;
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .hud-left,
+  .hud-right {
+    gap: 8px;
+  }
+
+  .brand {
+    font-size: 17px;
+  }
+
+  .game-body,
+  .game-main {
+    gap: 8px;
+  }
+
+  /* Re-stack the sidebar vertically (the 1120px rule laid it out as a row). */
+  .game-side {
+    flex-direction: column;
+  }
+
+  .table {
+    padding: 8px 8px 10px;
+  }
+
+  .table-center {
+    gap: 8px;
+  }
+
+  .reveal-cards {
+    gap: 14px;
+  }
+
+  .panel {
+    padding: 8px 10px 10px;
+  }
+
+  /* Menu & lobby scale down so nothing overflows a 320px screen. */
+  .menu h1 {
+    font-size: 40px;
+  }
+
+  .menu-panel {
+    padding: 18px 18px;
+    width: 100%;
+    max-width: 340px;
+  }
+
+  .join-row {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .join-row input {
+    width: 100%;
+  }
+
+  .room-code {
+    font-size: 30px;
+    letter-spacing: 6px;
+    padding: 8px 12px 8px 18px;
+  }
+
+  .game-over h2 {
+    font-size: 21px;
+  }
+
+  .round-log {
+    max-height: 160px;
   }
 }
 

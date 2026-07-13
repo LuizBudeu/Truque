@@ -47,6 +47,8 @@ export const messages = {
         "menu.hotseatHint": "Two players, one device — debugging mode.",
         "lobby.roomCode": "Room code",
         "lobby.shareHint": "Share this code — the game starts when your opponent joins.",
+        "lobby.copyLink": "Copy invite link",
+        "lobby.linkCopied": "Link copied!",
         "lobby.waiting": "Waiting for your opponent to join…",
         "lobby.connecting": "Connecting to the server…",
         "common.cancel": "Cancel",
@@ -69,6 +71,13 @@ export const messages = {
 
         // --- sidebar ---
         "side.lastRound": "Last round",
+        "side.roundLog": "Round history",
+
+        // --- round-history log ---
+        "log.round": ({ n }) => `R${n}`,
+        "log.tie": "Tie",
+        "log.youWon": "You won",
+        "log.wonBy": ({ label }) => `${label} won`,
 
         // --- swap window ---
         "swap.closed": "Swap window closed — waiting for your opponent…",
@@ -105,6 +114,9 @@ export const messages = {
         "over.hotseatConceded": ({ conceder, winner }) => `Player ${conceder} conceded — Player ${winner} wins the game!`,
         "over.hotseatWin": ({ winner }) => `Player ${winner} wins the game!`,
         "over.rematch": "Rematch",
+        "over.rematchWaiting": "Waiting for opponent…",
+        "over.rematchAsked": "Rematch requested — waiting for your opponent.",
+        "over.opponentWantsRematch": "Your opponent wants a rematch!",
 
         // --- HUD ---
         "phase.SWAP_WINDOW": "Swap window",
@@ -116,6 +128,8 @@ export const messages = {
         "hud.classicSuits": "Classic suits",
         "hud.fantasySuits": "Fantasy suits",
         "hud.suitsTitle": "Switch between classic suits and fantasy weapons",
+        "hud.soundOn": "Sound on — click to mute",
+        "hud.soundOff": "Sound off — click to unmute",
         "concede.confirm": "Concede the game?",
         "concede.yes": "Yes, concede",
         "concede.keepPlaying": "Keep playing",
@@ -238,6 +252,8 @@ export const messages = {
         "menu.hotseatHint": "Dois jogadores, um dispositivo — modo de depuração.",
         "lobby.roomCode": "Código da sala",
         "lobby.shareHint": "Compartilhe este código — o jogo começa quando seu oponente entrar.",
+        "lobby.copyLink": "Copiar link de convite",
+        "lobby.linkCopied": "Link copiado!",
         "lobby.waiting": "Aguardando seu oponente entrar…",
         "lobby.connecting": "Conectando ao servidor…",
         "common.cancel": "Cancelar",
@@ -260,6 +276,13 @@ export const messages = {
 
         // --- sidebar ---
         "side.lastRound": "Última rodada",
+        "side.roundLog": "Histórico de rodadas",
+
+        // --- round-history log ---
+        "log.round": ({ n }) => `R${n}`,
+        "log.tie": "Empate",
+        "log.youWon": "Você venceu",
+        "log.wonBy": ({ label }) => `${label} venceu`,
 
         // --- swap window ---
         "swap.closed": "Janela de troca fechada — aguardando seu oponente…",
@@ -297,6 +320,9 @@ export const messages = {
         "over.hotseatConceded": ({ conceder, winner }) => `Jogador ${conceder} desistiu — Jogador ${winner} venceu o jogo!`,
         "over.hotseatWin": ({ winner }) => `Jogador ${winner} venceu o jogo!`,
         "over.rematch": "Revanche",
+        "over.rematchWaiting": "Aguardando o oponente…",
+        "over.rematchAsked": "Revanche solicitada — aguardando seu oponente.",
+        "over.opponentWantsRematch": "Seu oponente quer uma revanche!",
 
         // --- HUD ---
         "phase.SWAP_WINDOW": "Janela de troca",
@@ -308,6 +334,8 @@ export const messages = {
         "hud.classicSuits": "Naipes clássicos",
         "hud.fantasySuits": "Naipes de fantasia",
         "hud.suitsTitle": "Alternar entre naipes clássicos e armas de fantasia",
+        "hud.soundOn": "Som ligado — clique para silenciar",
+        "hud.soundOff": "Som desligado — clique para ativar",
         "concede.confirm": "Desistir do jogo?",
         "concede.yes": "Sim, desistir",
         "concede.keepPlaying": "Continuar jogando",

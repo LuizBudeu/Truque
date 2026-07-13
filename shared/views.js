@@ -41,6 +41,7 @@ import { DANGER_SPACES } from './rules.js';
  * @property {Card|null} selfPick - own committed card
  * @property {Card|null} openCard - opponent's revealed pick in danger-zone open play
  * @property {?Object} lastResolution
+ * @property {Object[]} history - every resolved round, oldest first (public)
  * @property {0|1|'draw'|null} winner
  * @property {0|1|null} concededBy - public: how the game ended, if by concession
  */
@@ -84,6 +85,7 @@ export function getPlayerView(state, playerIndex) {
     selfPick: state.pendingPicks[playerIndex] ? { ...state.pendingPicks[playerIndex] } : null,
     openCard,
     lastResolution: state.lastResolution ? structuredClone(state.lastResolution) : null,
+    history: (state.history ?? []).map((r) => structuredClone(r)),
     winner: state.winner,
     concededBy: state.concededBy,
   };

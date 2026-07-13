@@ -203,3 +203,46 @@
     height: 66px;
   }
 }
+
+/* Phones: the full 12-space board must fit ~340px without scrolling. */
+@media (max-width: 600px) {
+  .battlefield {
+    gap: 3px;
+    /* Safety net for the very narrowest phones (≤320px): the board scrolls
+       inside itself rather than forcing the whole page to scroll sideways. */
+    max-width: 100%;
+    overflow-x: auto;
+    padding-block: 4px;
+  }
+
+  .space {
+    width: 26px;
+    height: 30px;
+    margin-right: -3px;
+  }
+
+  .space-hex {
+    inset: 1px 0;
+  }
+
+  .pawn {
+    width: 18px;
+    height: 24px;
+    font-size: 8px;
+    padding-top: 3px;
+  }
+
+  .tower {
+    width: 20px;
+    height: 46px;
+  }
+
+  .board-zone {
+    gap: 7px;
+  }
+
+  .buff-chip {
+    font-size: 11px;
+    padding: 2px 8px;
+  }
+}

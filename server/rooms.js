@@ -47,6 +47,8 @@ export class Room {
     this.state = null;
     /** Wall-clock ms since everyone disconnected, for garbage collection. */
     this.emptySince = null;
+    /** Rematch votes by seat; both true replays the game (Phase 5). */
+    this.rematchVotes = [false, false];
   }
 
   get status() {
@@ -113,6 +115,29 @@ export class Room {
     return { ok: true };
   }
 
+  /**
+   * Record a seat's vote to replay. When both seats have voted, start a fresh
+   * game (same seats and tokens, new seed) and clear the votes. Only valid once
+   * the current game is over.
+   *
+   * @param {0|1} playerIndex
+   * @param {number} seed - RNG seed for the replayed game (server-chosen)
+   * @returns {{ok: false, reason: string} | {ok: true, started: boolean}}
+   *   `started` is true when this vote completed the rematch (new game began).
+   */
+  requestRematch(playerIndex, seed) {
+    if (!this.state || this.state.phase !== 'GAME_OVER') {
+      return { ok: false, reason: 'game is not over' };
+    }
+    this.rematchVotes = this.rematchVotes.map((v, i) => (i === playerIndex ? true : v));
+    if (this.rematchVotes[0] && this.rematchVotes[1]) {
+      this.state = createInitialState(seed);
+      this.rematchVotes = [false, false];
+      return { ok: true, started: true };
+    }
+    return { ok: true, started: false };
+  }
+
   viewFor(playerIndex) {
     return getPlayerView(this.state, playerIndex);
   }
@@ -136,6 +161,12 @@ export class Room {
       players: this.players.map((p) => ({ connected: p.connected })),
       status: this.status,
     };
+    for (let p = 0; p < this.players.length; p++) this.sendTo(p, message);
+  }
+
+  /** Tell both seats who has voted for a rematch (drives the game-over UI). */
+  broadcastRematchState() {
+    const message = { type: 'REMATCH_STATE', requested: [...this.rematchVotes] };
     for (let p = 0; p < this.players.length; p++) this.sendTo(p, message);
   }
 }

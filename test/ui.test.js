@@ -46,11 +46,19 @@ describe('screens', () => {
     assert.ok(html.includes('room not found'));
   });
 
-  test('lobby shows the join code and a cancel action', () => {
+  test('lobby shows the join code, a copy-link button, and a cancel action', () => {
     const html = renderApp({ screen: 'lobby', roomCode: 'ABCD', connection: 'open' });
     assert.ok(html.includes('ABCD'));
     assert.ok(html.includes('Waiting for your opponent'));
+    assert.ok(html.includes('data-action="copy-link"'));
+    assert.ok(html.includes('Copy invite link'));
     assert.ok(html.includes('data-action="leave-room"'));
+  });
+
+  test('lobby copy-link button confirms once the link is copied', () => {
+    const html = renderApp({ screen: 'lobby', roomCode: 'ABCD', connection: 'open', copied: true });
+    assert.ok(html.includes('Link copied!'));
+    assert.ok(!html.includes('Copy invite link'));
   });
 
   test('game screen shows own hand, board, and HUD — never opponent cards', () => {
@@ -61,6 +69,14 @@ describe('screens', () => {
     assert.ok(html.includes('Round 1'));
     assert.ok(html.includes('data-action="play-card"'));
     assert.ok(html.includes('data-action="open-graveyard"'));
+    assert.ok(html.includes('data-action="toggle-mute"'));
+  });
+
+  test('the mute toggle reflects the sound preference', () => {
+    const on = renderApp(buildModel(makeState(), 0, ui()));
+    assert.ok(on.includes('🔊'));
+    const off = renderApp(buildModel(makeState(), 0, ui({ muted: true })));
+    assert.ok(off.includes('🔇'));
   });
 
   test('curtain hides every card and asks to pass the device', () => {
@@ -144,6 +160,28 @@ describe('phase-specific affordances', () => {
     assert.ok(!html.includes('data-action="select-card"')); // hands are put away
   });
 
+  test('the sidebar round-history log lists resolved rounds newest-first', () => {
+    const entry = (round, winner) => ({
+      round,
+      winner,
+      cards: [C(9, 'diamonds'), C(7, 'spades')],
+      effectiveValues: [9, 7],
+      manilha: null,
+      usedSuitCycle: false,
+      inverted: false,
+      buffsRemoved: false,
+      loserEffect: { type: 'RETREAT', amount: 1 },
+      winnerMoveRange: 2,
+      distance: 2,
+    });
+    const s = makeState({ history: [entry(1, 0), entry(2, 1)] });
+    const html = renderApp(buildModel(s, 0, ui()));
+    assert.ok(html.includes('Round history'));
+    assert.ok(html.includes('class="round-log"'));
+    // Newest round (R2) is rendered before the oldest (R1).
+    assert.ok(html.indexOf('R2') < html.indexOf('R1'));
+  });
+
   test('graveyard modal lists the public discards', () => {
     const s = makeState({ graveyard: [C(8, 'hearts'), C(3, 'spades')] });
     const html = renderApp(buildModel(s, 0, ui({ graveyardOpen: true })));
@@ -190,14 +228,29 @@ describe('online play (Phase 3)', () => {
     );
   });
 
-  test('game over speaks to the player and offers no online rematch yet', () => {
+  test('game over speaks to the player and offers a rematch or leave', () => {
     const s = makeState({ phase: 'GAME_OVER', winner: 1 });
     const loser = renderApp(onlineModel(s, 0));
     assert.ok(loser.includes('You lose'));
     const winner = renderApp(onlineModel(s, 1));
     assert.ok(winner.includes('You win the game!'));
-    assert.ok(!winner.includes('data-action="rematch"'));
+    assert.ok(winner.includes('data-action="request-rematch"'));
     assert.ok(winner.includes('data-action="leave-room"'));
+  });
+
+  test('rematch button flips to a waiting state once you have voted', () => {
+    const s = makeState({ phase: 'GAME_OVER', winner: 1 });
+    const asked = renderApp(onlineModel(s, 0, {}, { rematch: { you: true, opponent: false } }));
+    assert.ok(!asked.includes('data-action="request-rematch"'));
+    assert.ok(asked.includes('Waiting for opponent'));
+    assert.ok(asked.includes('Rematch requested'));
+  });
+
+  test('the opponent asking for a rematch is surfaced', () => {
+    const s = makeState({ phase: 'GAME_OVER', winner: 1 });
+    const html = renderApp(onlineModel(s, 0, {}, { rematch: { you: false, opponent: true } }));
+    assert.ok(html.includes('Your opponent wants a rematch'));
+    assert.ok(html.includes('data-action="request-rematch"'));
   });
 });
 

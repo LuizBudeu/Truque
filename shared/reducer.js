@@ -62,6 +62,8 @@ export const SWAP_BUDGET = 4;
  *   (auto-closed when their budget is 0)
  * @property {[Card|null, Card|null]} pendingPicks - committed picks this round
  * @property {?(Resolution & {distance: number})} lastResolution - for client animation
+ * @property {Array<Resolution & {distance: number, round: number}>} history - every
+ *   resolved round in order, for the round-history log (public info only)
  * @property {0|1|'draw'|null} winner - simultaneous elimination is a draw (§10 Q9)
  * @property {0|1|null} concededBy - who conceded, when the game ended that way
  * @property {number} rngState - serializable RNG cursor; advanced by every shuffle
@@ -110,6 +112,7 @@ export function createInitialState(seed) {
     swapDone: [false, false],
     pendingPicks: [null, null],
     lastResolution: null,
+    history: [],
     winner: null,
     concededBy: null,
     rngState,
@@ -222,11 +225,13 @@ function applyChooseMove(state, { player, selfOffset, pushAmount }) {
 function resolveRound(state) {
   const distance = distanceBetween(state.positions);
   const resolution = resolveCombat([...state.pendingPicks], state.manilha, distance);
+  const entry = { ...resolution, distance, round: state.round };
   let next = {
     ...state,
     graveyard: [...state.graveyard, ...state.pendingPicks], // Rulebook 2.11
     pendingPicks: [null, null],
     lastResolution: { ...resolution, distance },
+    history: [...(state.history ?? []), entry], // public log (Phase 5 round history)
   };
 
   if (resolution.winner === 'tie') {
