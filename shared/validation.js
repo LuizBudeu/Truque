@@ -45,6 +45,10 @@ export function isLegalAction(state, playerIndex, action) {
       return checkPlayCard(state, action);
     case 'CHOOSE_MOVE':
       return checkChooseMove(state, action);
+    case 'CONCEDE':
+      // Digital-only convenience (not in the rulebook): always legal while
+      // the game is running — the GAME_OVER gate above is the only condition.
+      return LEGAL;
     default:
       return illegal(`unknown action type ${action.type}`);
   }

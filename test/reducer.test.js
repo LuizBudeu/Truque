@@ -362,3 +362,34 @@ describe('illegal actions and immutability', () => {
     assert.equal(JSON.stringify(s0), snapshot);
   });
 });
+
+describe('concede (digital-only action, no rulebook section)', () => {
+  test('legal in every running phase; the opponent wins on the spot', () => {
+    const states = [
+      makeState(), // PICK_CARDS
+      makeState({ phase: 'SWAP_WINDOW', swapDone: [false, false] }),
+      makeState({
+        phase: 'WINNER_MOVE',
+        lastResolution: { winner: 1, winnerMoveRange: 2, loserEffect: { type: 'RETREAT', amount: 1 } },
+      }),
+    ];
+    for (const s0 of states) {
+      const s1 = applyAction(s0, { type: 'CONCEDE', player: 0 });
+      assert.equal(s1.phase, 'GAME_OVER', `phase ${s0.phase}`);
+      assert.equal(s1.winner, 1);
+      assert.equal(s1.concededBy, 0);
+    }
+  });
+
+  test('works mid-pick, even with a committed card outstanding', () => {
+    const committed = applyAction(makeState(), { type: 'PLAY_CARD', player: 0, card: C(2, 'hearts') });
+    const s = applyAction(committed, { type: 'CONCEDE', player: 1 });
+    assert.equal(s.winner, 0);
+    assert.equal(s.concededBy, 1);
+  });
+
+  test('not legal once the game is over', () => {
+    const over = makeState({ phase: 'GAME_OVER', winner: 0 });
+    assert.equal(isLegalAction(over, 1, { type: 'CONCEDE', player: 1 }).legal, false);
+  });
+});

@@ -5,8 +5,9 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { renderApp } from '../client/js/render.js';
-import { nextSeat, buildModel } from '../client/js/store.js';
+import { nextSeat, buildModel, buildViewModel } from '../client/js/store.js';
 import { applyAction } from '../shared/reducer.js';
+import { getPlayerView } from '../shared/views.js';
 import { C, makeState, autoPlay } from './helpers.js';
 
 const ui = (overrides = {}) => ({
@@ -20,10 +21,36 @@ const ui = (overrides = {}) => ({
 
 const cardMarker = (c) => `data-card="${c.rank}-${c.suit}"`;
 
+/** Model as main.js builds it in online mode. */
+const onlineModel = (state, seat, uiOverrides = {}, extra = {}) =>
+  buildViewModel(getPlayerView(state, seat), ui(uiOverrides), {
+    online: true,
+    connection: 'open',
+    opponentConnected: true,
+    ...extra,
+  });
+
 describe('screens', () => {
-  test('menu offers a new hotseat game', () => {
+  test('menu offers online play; hotseat only behind the debug flag', () => {
     const html = renderApp({ screen: 'menu' });
-    assert.ok(html.includes('data-action="new-game"'));
+    assert.ok(html.includes('data-action="create-room"'));
+    assert.ok(html.includes('data-action="join-room"'));
+    assert.ok(html.includes('id="join-code"'));
+    assert.ok(!html.includes('data-action="new-game"'));
+    const debug = renderApp({ screen: 'menu', hotseatEnabled: true });
+    assert.ok(debug.includes('data-action="new-game"'));
+  });
+
+  test('menu surfaces a rejection reason', () => {
+    const html = renderApp({ screen: 'menu', error: 'room not found' });
+    assert.ok(html.includes('room not found'));
+  });
+
+  test('lobby shows the join code and a cancel action', () => {
+    const html = renderApp({ screen: 'lobby', roomCode: 'ABCD', connection: 'open' });
+    assert.ok(html.includes('ABCD'));
+    assert.ok(html.includes('Waiting for your opponent'));
+    assert.ok(html.includes('data-action="leave-room"'));
   });
 
   test('game screen shows own hand, board, and HUD — never opponent cards', () => {
@@ -126,6 +153,82 @@ describe('phase-specific affordances', () => {
   });
 });
 
+describe('online play (Phase 3)', () => {
+  test('a committed pick shows the waiting state instead of the play button', () => {
+    const s = applyAction(makeState(), { type: 'PLAY_CARD', player: 0, card: C(2, 'hearts') });
+    const html = renderApp(onlineModel(s, 0));
+    assert.ok(html.includes('waiting for your opponent'));
+    assert.ok(!html.includes('data-action="play-card"'));
+    // The other seat still gets to pick.
+    assert.ok(renderApp(onlineModel(s, 1)).includes('data-action="play-card"'));
+  });
+
+  test('the endangered player waits for the open card before picking', () => {
+    const s = makeState({ positions: [0, 7] });
+    const html = renderApp(onlineModel(s, 0));
+    assert.ok(html.includes('play openly first'));
+    assert.ok(!html.includes('data-action="play-card"'));
+  });
+
+  test('a closed swap window shows the waiting state', () => {
+    const s = makeState({ phase: 'SWAP_WINDOW', swapDone: [true, false] });
+    const html = renderApp(onlineModel(s, 0));
+    assert.ok(html.includes('Swap window closed'));
+    assert.ok(!html.includes('data-action="skip-swap"'));
+  });
+
+  test('connection and opponent-status banners', () => {
+    const s = makeState();
+    assert.ok(renderApp(onlineModel(s, 0)).includes('banner') === false);
+    assert.ok(
+      renderApp(onlineModel(s, 0, {}, { opponentConnected: false })).includes(
+        'opponent disconnected',
+      ),
+    );
+    assert.ok(
+      renderApp(onlineModel(s, 0, {}, { connection: 'closed' })).includes('Connection lost'),
+    );
+  });
+
+  test('game over speaks to the player and offers no online rematch yet', () => {
+    const s = makeState({ phase: 'GAME_OVER', winner: 1 });
+    const loser = renderApp(onlineModel(s, 0));
+    assert.ok(loser.includes('You lose'));
+    const winner = renderApp(onlineModel(s, 1));
+    assert.ok(winner.includes('You win the game!'));
+    assert.ok(!winner.includes('data-action="rematch"'));
+    assert.ok(winner.includes('data-action="leave-room"'));
+  });
+});
+
+describe('concede', () => {
+  test('HUD offers concede with a two-step confirm', () => {
+    const s = makeState();
+    const html = renderApp(buildModel(s, 0, ui()));
+    assert.ok(html.includes('data-action="concede"'));
+    assert.ok(!html.includes('data-action="confirm-concede"'));
+    const armed = renderApp(buildModel(s, 0, ui({ concedeArmed: true })));
+    assert.ok(armed.includes('data-action="confirm-concede"'));
+    assert.ok(armed.includes('data-action="cancel-concede"'));
+    assert.ok(!armed.includes('data-action="concede"')); // arm button replaced
+  });
+
+  test('no concede control once the game is over', () => {
+    const html = renderApp(buildModel(makeState({ phase: 'GAME_OVER', winner: 1 }), 0, ui()));
+    assert.ok(!html.includes('data-action="concede"'));
+    assert.ok(!html.includes('data-action="confirm-concede"'));
+  });
+
+  test('game-over wording explains a concession in both modes', () => {
+    const s = makeState({ phase: 'GAME_OVER', winner: 1, concededBy: 0 });
+    assert.ok(
+      renderApp(buildModel(s, 0, ui())).includes('Player 1 conceded — Player 2 wins the game!'),
+    );
+    assert.ok(renderApp(onlineModel(s, 0)).includes('You conceded — your opponent wins the game.'));
+    assert.ok(renderApp(onlineModel(s, 1)).includes('Your opponent conceded — you win the game!'));
+  });
+});
+
 describe('full-game render sweep', () => {
   test('every state of a full game renders cleanly and leaks nothing', () => {
     const checkHTML = (html, state, seat, label) => {
@@ -150,6 +253,10 @@ describe('full-game render sweep', () => {
             seat,
             `seed ${seed} (curtain)`,
           );
+          // Online renders BOTH seats at every state (no curtain to hide behind).
+          for (const p of [0, 1]) {
+            checkHTML(renderApp(onlineModel(state, p)), state, p, `seed ${seed} (online seat ${p})`);
+          }
         },
       });
       const html = renderApp(buildModel(final, 0, ui()));

@@ -69,6 +69,24 @@ button.selected {
   border-color: var(--p0);
 }
 
+button.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+button.danger:hover:not(:disabled) {
+  background: #ffe3e3;
+  border-color: var(--danger);
+}
+
+.concede-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--danger);
+  font-weight: 600;
+}
+
 .buttons {
   display: flex;
   gap: 10px;
@@ -93,6 +111,59 @@ button.selected {
 .hint {
   color: var(--muted);
   font-size: 14px;
+}
+
+.menu-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.join-row {
+  display: flex;
+  gap: 8px;
+}
+
+.join-row input {
+  font: inherit;
+  padding: 8px 12px;
+  border: 1px solid #adb5bd;
+  border-radius: 8px;
+  width: 130px;
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 2px;
+}
+
+.error {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.room-code {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 8px;
+  background: var(--paper);
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
+  padding: 10px 24px;
+}
+
+.banner {
+  width: 100%;
+  max-width: 960px;
+  border-radius: 8px;
+  padding: 8px 14px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.banner.warning {
+  background: #fff3bf;
+  border: 1px solid #fab005;
 }
 
 /* --- HUD ------------------------------------------------------------------ */

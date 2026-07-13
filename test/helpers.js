@@ -38,6 +38,7 @@ export function makeState(overrides = {}) {
     pendingPicks: [null, null],
     lastResolution: null,
     winner: null,
+    concededBy: null,
     rngState: 1,
     ...overrides,
   };

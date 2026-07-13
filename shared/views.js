@@ -42,6 +42,7 @@ import { DANGER_SPACES } from './rules.js';
  * @property {Card|null} openCard - opponent's revealed pick in danger-zone open play
  * @property {?Object} lastResolution
  * @property {0|1|'draw'|null} winner
+ * @property {0|1|null} concededBy - public: how the game ended, if by concession
  */
 
 /**
@@ -84,5 +85,6 @@ export function getPlayerView(state, playerIndex) {
     openCard,
     lastResolution: state.lastResolution ? structuredClone(state.lastResolution) : null,
     winner: state.winner,
+    concededBy: state.concededBy,
   };
 }

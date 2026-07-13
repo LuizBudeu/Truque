@@ -63,6 +63,7 @@ export const SWAP_BUDGET = 4;
  * @property {[Card|null, Card|null]} pendingPicks - committed picks this round
  * @property {?(Resolution & {distance: number})} lastResolution - for client animation
  * @property {0|1|'draw'|null} winner - simultaneous elimination is a draw (§10 Q9)
+ * @property {0|1|null} concededBy - who conceded, when the game ended that way
  * @property {number} rngState - serializable RNG cursor; advanced by every shuffle
  */
 
@@ -77,6 +78,8 @@ export const SWAP_BUDGET = 4;
  * - { type: 'CHOOSE_MOVE', player, selfOffset, pushAmount? }  WINNER_MOVE;
  *     selfOffset is advance-positive within ±winnerMoveRange; pushAmount
  *     (0–3) is required exactly when the winner played K
+ * - { type: 'CONCEDE', player }                    any phase; immediate loss
+ *     (digital-only convenience, not in the rulebook)
  *
  * @typedef {Object} Action
  * @property {string} type
@@ -108,6 +111,7 @@ export function createInitialState(seed) {
     pendingPicks: [null, null],
     lastResolution: null,
     winner: null,
+    concededBy: null,
     rngState,
   };
 }
@@ -133,6 +137,8 @@ export function applyAction(state, action) {
       return applyPlayCard(state, action);
     case 'CHOOSE_MOVE':
       return applyChooseMove(state, action);
+    case 'CONCEDE':
+      return applyConcede(state, action);
     /* c8 ignore next 2 -- unreachable: validation rejects unknown types */
     default:
       throw new Error(`Unhandled action type ${action.type}`);
@@ -179,6 +185,14 @@ function applyPlayCard(state, { player, card }) {
   };
   // Both committed → reveal and resolve (Rulebook 2.4).
   return next.pendingPicks[0] && next.pendingPicks[1] ? resolveRound(next) : next;
+}
+
+/**
+ * Immediate loss on request. Digital-only convenience (not in the rulebook):
+ * the opponent wins on the spot; `concededBy` lets clients word the result.
+ */
+function applyConcede(state, { player }) {
+  return { ...gameOver(state, 1 - player), concededBy: player };
 }
 
 function applyChooseMove(state, { player, selfOffset, pushAmount }) {

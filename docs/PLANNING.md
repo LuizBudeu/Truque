@@ -135,10 +135,14 @@ truque/
 │       ├── animate.js           # diffs prev/next view -> animation sequences
 │       └── ui/                  # hand, board, graveyard modal, manilha, HUD
 └── test/
+    ├── helpers.js               # fixtures, legal-action enumerator, autoPlay driver
     ├── rules.test.js
     ├── reducer.test.js
     ├── views.test.js            # hidden-information leak tests
-    └── scenarios.test.js        # full scripted games
+    ├── scenarios.test.js        # full scripted games
+    ├── hotseat.test.js          # seat sequencing + model derivation
+    ├── ui.test.js               # render(model) for every screen/phase, both modes
+    └── server.test.js           # end-to-end protocol over real WebSockets
 ```
 
 ### 3.6 Client rendering model
@@ -151,13 +155,13 @@ Declarative and simple: `render(view)` rebuilds the visible UI from the current 
 
 Sequence: receive view → run animations for the diff (async) → commit final rendered state. Keep a small queue so a fast series of server messages doesn't cut animations short.
 
-### 3.7 Network protocol (draft)
+### 3.7 Network protocol
 
 Client → server:
 
 ```
 { type: 'CREATE_ROOM' }
-{ type: 'JOIN_ROOM', roomCode }
+{ type: 'JOIN_ROOM', roomCode, playerToken? }  // playerToken re-claims a seat after refresh/drop
 { type: 'ACTION', action }        // game actions, validated by /shared/validation.js
 { type: 'RESYNC' }                // request full view after reconnect
 ```
@@ -165,14 +169,15 @@ Client → server:
 Server → client:
 
 ```
-{ type: 'ROOM_CREATED', roomCode, playerToken }
-{ type: 'ROOM_STATE', players, status }
+{ type: 'ROOM_CREATED', roomCode, playerToken, playerIndex }
+{ type: 'ROOM_JOINED', roomCode, playerToken, playerIndex }   // join AND rejoin ack
+{ type: 'ROOM_STATE', players, status }        // players: [{connected}], status: WAITING|PLAYING
 { type: 'VIEW', view }            // filtered state after every accepted action
 { type: 'REJECTED', reason }
 { type: 'OPPONENT_STATUS', connected }
 ```
 
-Server is fully authoritative: it applies actions through the same reducer, rejects illegal ones, and pushes fresh views. `playerToken` (random, stored in `sessionStorage`) allows rejoining a room after a refresh or drop.
+Server is fully authoritative: it applies actions through the same reducer, rejects illegal ones, and pushes fresh views. `playerToken` (random, stored in `sessionStorage`) allows rejoining a room after a refresh or drop; the client's `net.js` auto-reconnects and replays `JOIN_ROOM` with the stored token. Rooms whose players have all been disconnected for 15 minutes are garbage-collected.
 
 Deck shuffling uses a **seedable RNG** (e.g. mulberry32) — the server picks the seed. This makes bugs reproducible and scripted tests deterministic.
 
@@ -274,7 +279,7 @@ _Rationale: debugging rules and networking at the same time is miserable. Rules 
 - [x] Phase 0 — rules signed off, skeleton runs
 - [x] Phase 1 — full game playable via tests
 - [x] Phase 2 — hotseat playable in browser
-- [ ] Phase 3 — online play between two machines
+- [x] Phase 3 — online play between two machines
 - [ ] Phase 4 — visual pass complete
 - [ ] Phase 5 — demo-ready
 
@@ -329,3 +334,5 @@ _Questions Q10–Q14 were raised and answered during Phase 1 implementation (202
 - Forced retreats (base 1, A's 2, tie retreat) beyond a player's first space eliminate them (rulebook 2.12). K's push instead clamps at the loser's first space — except when the loser already stands there, where any push ≥ 1 eliminates them (rulebook 2.8, parenthetical).
 - Conflicting loss effects: a loser who played K returns to their first space; this replaces any other retreat effect (e.g. also losing against an A).
 - A's forced suit-order comparison ignores numeric values entirely, manilha included.
+
+**Q15 — Concede (digital-only addition, Phase 3, 2026-07-13).** Not in the rulebook: a `CONCEDE` action is legal for either player in any running phase and makes the opponent win on the spot (`concededBy` is public in state/views so clients can word the result). Added so an online player can end a game gracefully instead of abandoning the room; the finished room is cleaned up by the normal empty-room GC. The UI requires a two-step confirmation.

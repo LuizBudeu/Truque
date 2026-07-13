@@ -1,12 +1,11 @@
 /**
- * Hotseat state container and model derivation (Phase 2).
+ * Client state container and model derivation.
  *
- * Holds the authoritative GameState — in hotseat the client IS the server —
- * and exposes pure helpers to derive what the UI needs. Rendering never reads
- * the raw state: it goes through getPlayerView(state, seat), so hidden
- * information stays filtered exactly as it will be online. In Phase 3 the
- * state moves to the server and this store holds the last received view
- * instead (net.js dispatches, same subscribe API).
+ * Hotseat mode: holds the authoritative GameState — the client IS the server
+ * — and dispatches through the shared reducer. Online mode (Phase 3) never
+ * touches this state: main.js feeds server views straight to buildViewModel.
+ * Either way rendering only ever sees a PlayerView, so hidden information
+ * stays filtered exactly the same offline and online.
  */
 
 import { createInitialState, applyAction } from '../../shared/reducer.js';
@@ -68,26 +67,40 @@ export function nextSeat(state) {
   }
 }
 
-/**
- * Build the render model for one seat: their filtered view, the UI state, and
- * — during WINNER_MOVE — the legality of every move option so the renderer
- * can disable buttons without touching the full state.
- *
- * @param {import('../../shared/reducer.js').GameState} state
- * @param {0|1} seat
- * @param {Object} ui - {curtain, selected, offset, push, graveyardOpen}
- */
+/** Hotseat entry point: filter the full state for a seat, then derive the model. */
 export function buildModel(state, seat, ui) {
-  const model = { screen: 'game', seat, view: getPlayerView(state, seat), ui };
+  return buildViewModel(getPlayerView(state, seat), ui);
+}
 
-  if (state.phase === 'WINNER_MOVE' && state.lastResolution.winner === seat) {
-    const resolution = state.lastResolution;
+/**
+ * Build the render model from a PlayerView: the view, the UI state, and —
+ * during WINNER_MOVE — the legality of every move option so the renderer can
+ * disable buttons. Legality is derived from the view's PUBLIC fields alone
+ * (phase, positions, lastResolution), which is exactly why this works both
+ * in hotseat and online, where the server view is all the client has.
+ *
+ * @param {import('../../shared/views.js').PlayerView} view
+ * @param {Object} ui - {curtain, selected, offset, push, graveyardOpen}
+ * @param {Object} [extra] - mode-specific model fields (e.g. online, banner)
+ */
+export function buildViewModel(view, ui, extra = {}) {
+  const seat = view.playerIndex;
+  const model = { screen: 'game', seat, view, ui, ...extra };
+
+  if (view.phase === 'WINNER_MOVE' && view.lastResolution.winner === seat) {
+    const resolution = view.lastResolution;
+    // The public slice of state that CHOOSE_MOVE legality depends on.
+    const publicState = {
+      phase: view.phase,
+      positions: view.positions,
+      lastResolution: resolution,
+    };
     const isPush = resolution.loserEffect.type === 'K_PUSH';
     const offsets = [];
     for (let value = -resolution.winnerMoveRange; value <= resolution.winnerMoveRange; value++) {
       const action = { type: 'CHOOSE_MOVE', player: seat, selfOffset: value };
       if (isPush) action.pushAmount = ui.push;
-      offsets.push({ value, legal: isLegalAction(state, seat, action).legal });
+      offsets.push({ value, legal: isLegalAction(publicState, seat, action).legal });
     }
     model.move = {
       offsets,

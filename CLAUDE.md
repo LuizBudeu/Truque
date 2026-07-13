@@ -6,10 +6,11 @@ Two-player online card game on a linear 12-space board: both players secretly pi
 
 ## Commands
 
-- `npm test` — run all tests (Node's built-in `node:test`, no dependencies)
+- `npm test` — run all tests (Node's built-in `node:test`; needs `npm install` for `ws` since the server tests run the real WebSocket server)
 - `node --test test/rules.test.js` — run a single test file
-- `npm run dev` — dependency-free static server on :8080 for hotseat play (serves the repo root so `/shared` imports resolve; `PORT=` to override)
-- `node server/index.js` — start the game server (Phase 3+)
+- `npm start` — the real game server on :8080 (`PORT=` to override): static client + `ws` WebSocket on the same port; required for online play
+- `npm run dev` — dependency-free static server on :8080, enough for hotseat-only work (no WebSocket)
+- Hotseat mode is a debugging tool behind a URL flag: open `/client/?hotseat`
 
 ## Architecture in one paragraph
 
@@ -35,7 +36,8 @@ The whole game is a pure rules engine in `/shared`: immutable state + `applyActi
 
 ## Phase status
 
-Track progress in `docs/PLANNING.md` §9. Each phase must be verifiably done before the next starts. Phases 0–2 are complete: rules engine fully implemented and tested, and the hotseat UI plays complete games in one browser tab (`npm run dev`). Phase 3 (networking) is next. Notes:
+Track progress in `docs/PLANNING.md` §9. Each phase must be verifiably done before the next starts. Phases 0–3 are complete: rules engine fully implemented and tested, hotseat UI plays complete games in one tab, and online play works — rooms with 4-letter join codes, authoritative `ws` server, per-player views, and refresh/drop rejoin via `playerToken` in `sessionStorage`. Phase 4 (visual design & animation) is next. Notes:
 
 - `state.phase` only takes the resting values `SWAP_WINDOW | PICK_CARDS | WINNER_MOVE | GAME_OVER` — the other conceptual phases from §3.2 resolve atomically inside reducer transitions.
-- `client/js/render.js` and everything in `client/js/ui/` are pure model → HTML-string functions with zero DOM access, so the whole UI is testable in Node (`test/ui.test.js` renders every state of full games). Keep it that way: `client/js/main.js` is the only module that may touch `document` (innerHTML + `data-action` click delegation), and `client/js/store.js` owns state/seat/model derivation.
+- `client/js/render.js` and everything in `client/js/ui/` are pure model → HTML-string functions with zero DOM access, so the whole UI is testable in Node (`test/ui.test.js` renders every state of full games in both modes). Keep it that way: `client/js/main.js` is the only module that may touch `document`/`sessionStorage` (innerHTML + `data-action` click delegation), `client/js/net.js` is a dumb reconnecting WebSocket pipe, and `client/js/store.js` owns model derivation (`buildViewModel` works from a PlayerView alone — move legality only needs public fields).
+- The server never serializes full state: every outgoing game message goes through `Room.sendTo`/`getPlayerView`. `test/server.test.js` plays a full game over real WebSockets against a locally mirrored reducer and asserts every frame leaks nothing — extend it when touching the protocol.

@@ -1,4 +1,4 @@
-/** Top bar: round, phase, seat badge, counts, graveyard access. */
+/** Top bar: round, phase, seat badge, counts, graveyard access, concede. */
 
 const PHASE_LABELS = {
   SWAP_WINDOW: 'Swap window',
@@ -7,7 +7,21 @@ const PHASE_LABELS = {
   GAME_OVER: 'Game over',
 };
 
-export function hudHTML(view) {
+/**
+ * @param {import('../../../shared/views.js').PlayerView} view
+ * @param {Object} [options]
+ * @param {boolean} [options.concede] - show the concede control (game running)
+ * @param {boolean} [options.concedeArmed] - first click happened; ask to confirm
+ */
+export function hudHTML(view, { concede = false, concedeArmed = false } = {}) {
+  const concedeControls = !concede
+    ? ''
+    : concedeArmed
+      ? `<span class="concede-confirm">Concede the game?
+           <button type="button" class="danger" data-action="confirm-concede">Yes, concede</button>
+           <button type="button" data-action="cancel-concede">Keep playing</button>
+         </span>`
+      : '<button type="button" class="danger" data-action="concede">Concede</button>';
   return `
     <header class="hud">
       <div class="hud-left">
@@ -21,6 +35,7 @@ export function hudHTML(view) {
         <span>Opponent hand ${view.opponentHandCount}</span>
         <span>Swaps left — P1: ${view.swapsRemaining[0]} · P2: ${view.swapsRemaining[1]}</span>
         <button type="button" data-action="open-graveyard">Graveyard (${view.graveyard.length})</button>
+        ${concedeControls}
       </div>
     </header>`;
 }
