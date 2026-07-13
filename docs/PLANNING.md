@@ -273,7 +273,7 @@ _Rationale: debugging rules and networking at the same time is miserable. Rules 
 
 - [x] Phase 0 — rules signed off, skeleton runs
 - [x] Phase 1 — full game playable via tests
-- [ ] Phase 2 — hotseat playable in browser
+- [x] Phase 2 — hotseat playable in browser
 - [ ] Phase 3 — online play between two machines
 - [ ] Phase 4 — visual pass complete
 - [ ] Phase 5 — demo-ready

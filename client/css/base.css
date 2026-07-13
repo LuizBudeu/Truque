@@ -1,1 +1,326 @@
-/* Global layout, typography, screen routing (menu / room / game). Phase 2+. */
+/* Global layout, typography, screens, panels, curtain, modal. Placeholder
+   styling for Phase 2 — the real art direction lands in Phase 4. */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+:root {
+  --p0: #3b5bdb;
+  --p0-soft: #bac8ff;
+  --p1: #e8590c;
+  --danger: #fa5252;
+  --ink: #212529;
+  --muted: #495057;
+  --paper: #ffffff;
+  --felt: #e9ecef;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: var(--felt);
+  color: var(--ink);
+}
+
+.screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+}
+
+/* --- buttons ------------------------------------------------------------ */
+
+button {
+  font: inherit;
+  padding: 8px 14px;
+  border: 1px solid #adb5bd;
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--muted);
+  background: #f1f3f5;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--p0);
+  border-color: var(--p0);
+  color: white;
+}
+
+button.primary:hover:not(:disabled) {
+  background: #364fc7;
+}
+
+button.selected {
+  outline: 3px solid var(--p0-soft);
+  border-color: var(--p0);
+}
+
+.buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* --- menu ---------------------------------------------------------------- */
+
+.menu {
+  justify-content: center;
+}
+
+.menu h1 {
+  font-size: 44px;
+}
+
+.tagline {
+  color: var(--muted);
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* --- HUD ------------------------------------------------------------------ */
+
+.hud {
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--paper);
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+.hud-left,
+.hud-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.seat-badge {
+  padding: 2px 10px;
+  border-radius: 999px;
+  color: white;
+  font-weight: 600;
+}
+
+.seat-badge.seat-0 {
+  background: var(--p0);
+}
+
+.seat-badge.seat-1 {
+  background: var(--p1);
+}
+
+/* --- table & panels -------------------------------------------------------- */
+
+.table {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.panel {
+  width: 100%;
+  max-width: 960px;
+  background: var(--paper);
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.instructions {
+  color: var(--muted);
+  text-align: center;
+}
+
+.manilha-panel {
+  background: var(--paper);
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 150px;
+}
+
+.manilha-note {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  max-width: 140px;
+}
+
+/* --- reveal ---------------------------------------------------------------- */
+
+.reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.reveal-cards {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.reveal-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reveal-label,
+.reveal-vs {
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.reveal-value {
+  font-weight: 700;
+}
+
+.reveal-outcome {
+  font-weight: 600;
+}
+
+.badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.badge {
+  background: #fff3bf;
+  border: 1px solid #fab005;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+/* --- action zone ------------------------------------------------------------ */
+
+.option-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.option-label {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.open-play {
+  background: #ffe3e3;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.game-over {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* --- curtain ------------------------------------------------------------------ */
+
+.curtain {
+  justify-content: center;
+  background: #343a40;
+}
+
+.curtain-panel {
+  background: #495057;
+  color: white;
+  border-radius: 14px;
+  padding: 28px;
+  max-width: 620px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.curtain-panel .reveal {
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+/* --- modal ----------------------------------------------------------------------- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal {
+  background: var(--paper);
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 660px;
+  max-height: 80vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.graveyard-cards {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}

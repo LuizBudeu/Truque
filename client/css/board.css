@@ -1,1 +1,67 @@
-/* Linear 12-space board, pawns, danger-zone cues, distance indicator. Phase 2+. */
+/* Linear 12-space board, pawns, danger spaces, distance readout. */
+
+.board-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.board {
+  display: flex;
+  gap: 4px;
+}
+
+.space {
+  width: 56px;
+  height: 56px;
+  background: #dee2e6;
+  border: 2px solid #adb5bd;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.space.danger {
+  background: #ffe3e3;
+  border-color: var(--danger);
+}
+
+.pawn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.pawn-p0 {
+  background: var(--p0);
+}
+
+.pawn-p1 {
+  background: var(--p1);
+}
+
+.distance-readout {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+@media (max-width: 780px) {
+  .space {
+    width: 40px;
+    height: 40px;
+  }
+
+  .pawn {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+}

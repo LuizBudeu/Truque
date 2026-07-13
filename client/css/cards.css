@@ -1,1 +1,79 @@
-/* Card faces/backs, hand fan, manilha slot, graveyard modal, flip animations. Phase 2+. */
+/* Card faces, hand layout, selection states. */
+
+.card {
+  width: 58px;
+  height: 82px;
+  background: white;
+  border: 2px solid #ced4da;
+  border-radius: 8px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 20px;
+  font-weight: 700;
+  padding: 0;
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+
+button.card {
+  cursor: pointer;
+}
+
+button.card:hover:not(:disabled) {
+  transform: translateY(-4px);
+  background: white;
+}
+
+.card.selected {
+  border-color: var(--p0);
+  outline: 3px solid var(--p0-soft);
+  transform: translateY(-8px);
+}
+
+.card.small {
+  width: 42px;
+  height: 60px;
+  font-size: 14px;
+}
+
+.suit-hearts,
+.suit-diamonds {
+  color: #e03131;
+}
+
+.suit-spades {
+  color: #212529;
+}
+
+.suit-clubs {
+  color: #2b8a3e;
+}
+
+.hand-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.hand-zone h3 {
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.hand {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.self-pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}

@@ -8,6 +8,7 @@ Two-player online card game on a linear 12-space board: both players secretly pi
 
 - `npm test` — run all tests (Node's built-in `node:test`, no dependencies)
 - `node --test test/rules.test.js` — run a single test file
+- `npm run dev` — dependency-free static server on :8080 for hotseat play (serves the repo root so `/shared` imports resolve; `PORT=` to override)
 - `node server/index.js` — start the game server (Phase 3+)
 
 ## Architecture in one paragraph
@@ -34,4 +35,7 @@ The whole game is a pure rules engine in `/shared`: immutable state + `applyActi
 
 ## Phase status
 
-Track progress in `docs/PLANNING.md` §9. Each phase must be verifiably done before the next starts. Phases 0–1 are complete (rules engine fully implemented and tested; full games play through the reducer alone). Phase 2 (hotseat UI) is next. Note: `state.phase` only takes the resting values `SWAP_WINDOW | PICK_CARDS | WINNER_MOVE | GAME_OVER` — the other conceptual phases from §3.2 resolve atomically inside reducer transitions.
+Track progress in `docs/PLANNING.md` §9. Each phase must be verifiably done before the next starts. Phases 0–2 are complete: rules engine fully implemented and tested, and the hotseat UI plays complete games in one browser tab (`npm run dev`). Phase 3 (networking) is next. Notes:
+
+- `state.phase` only takes the resting values `SWAP_WINDOW | PICK_CARDS | WINNER_MOVE | GAME_OVER` — the other conceptual phases from §3.2 resolve atomically inside reducer transitions.
+- `client/js/render.js` and everything in `client/js/ui/` are pure model → HTML-string functions with zero DOM access, so the whole UI is testable in Node (`test/ui.test.js` renders every state of full games). Keep it that way: `client/js/main.js` is the only module that may touch `document` (innerHTML + `data-action` click delegation), and `client/js/store.js` owns state/seat/model derivation.
