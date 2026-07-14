@@ -43,6 +43,7 @@ const ui = {
   push: 0, // K push choice
   graveyardOpen: false,
   rulesOpen: false, // floating rules popup
+  aboutOpen: false, // floating colophon (credits) popup
   concedeArmed: false, // first concede click; the HUD asks for confirmation
   fantasySuits: localStorage.getItem(SUITS_KEY) === '1', // ♠♦♥♣ vs 🗡🏹🔮💀
   lang: initialLang, // UI language; see i18n.js
@@ -201,6 +202,14 @@ function onClick(event) {
       break;
     case 'close-rules':
       ui.rulesOpen = false;
+      rerender();
+      break;
+    case 'open-about':
+      ui.aboutOpen = true;
+      rerender();
+      break;
+    case 'close-about':
+      ui.aboutOpen = false;
       rerender();
       break;
     case 'open-graveyard':
@@ -463,6 +472,7 @@ function currentModel() {
         copied: ui.copied,
         lang: ui.lang,
         rulesOpen: ui.rulesOpen,
+        aboutOpen: ui.aboutOpen,
       };
     }
     return buildViewModel(online.view, ui, {
@@ -482,6 +492,7 @@ function currentModel() {
     error: menuError,
     lang: ui.lang,
     rulesOpen: ui.rulesOpen,
+    aboutOpen: ui.aboutOpen,
   };
 }
 

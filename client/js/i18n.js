@@ -184,6 +184,17 @@ export const messages = {
         "help.button": "Rules",
         "help.title": "How to play",
 
+        // --- colophon (the credits; proper nouns come from ui/about.js) ---
+        "about.button": "About",
+        "about.title": "Colophon",
+        "about.and": "and",
+        "about.devised": ({ authors, course, institution, term }) =>
+            `Truqué was devised by ${authors} for ${course} at ${institution}, ${term}.`,
+        "about.origin": "It began as a printed board and a deck of cards on a classroom table.",
+        "about.edition": ({ developer }) => `This digital edition was made by ${developer}.`,
+        "about.rules": ({ href }) =>
+            `The original rules may be read <a href="${href}" target="_blank" rel="noopener">here</a>.`,
+
         // --- rules modal (structured sections) ---
         "rules.sections": [
             {
@@ -386,6 +397,17 @@ export const messages = {
         "lang.title": ({ name }) => `Idioma: ${name} — clique para alternar`,
         "help.button": "Regras",
         "help.title": "Como jogar",
+
+        // --- colophon (the credits; proper nouns come from ui/about.js) ---
+        "about.button": "Sobre",
+        "about.title": "Colofão",
+        "about.and": "e",
+        "about.devised": ({ authors, course, institution, term }) =>
+            `Truqué foi concebido por ${authors} para ${course} na ${institution}, ${term}.`,
+        "about.origin": "Começou como um tabuleiro impresso e um baralho sobre a mesa de uma sala de aula.",
+        "about.edition": ({ developer }) => `Esta edição digital foi feita por ${developer}.`,
+        "about.rules": ({ href }) =>
+            `As regras originais podem ser lidas <a href="${href}" target="_blank" rel="noopener">aqui</a>.`,
 
         // --- rules modal (structured sections) ---
         "rules.sections": [

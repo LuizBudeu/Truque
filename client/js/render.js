@@ -39,6 +39,7 @@ import { graveyardHTML } from "./ui/graveyard.js";
 import { maniculeHTML } from "./ui/manicule.js";
 import { cardHTML } from "./ui/card.js";
 import { helpFabHTML, rulesModalHTML } from "./ui/rules.js";
+import { aboutFabHTML, aboutModalHTML } from "./ui/about.js";
 
 export function renderApp(model) {
     const t = createTranslator(model.lang ?? model.ui?.lang ?? DEFAULT_LANG);
@@ -50,10 +51,16 @@ export function renderApp(model) {
     return gameHTML(model, t) + chrome;
 }
 
-/** The always-available help FAB (+ its modal when open). Not on the curtain. */
+/**
+ * The two always-available marks and their modals: the help FAB bottom-right,
+ * the colophon FAB bottom-left. Present on every screen but the curtain.
+ * The menu/lobby models carry the open flags flat; the game model nests them
+ * under `ui` — accept either.
+ */
 function chromeHTML(model, t, lang) {
     const rulesOpen = model.ui?.rulesOpen ?? model.rulesOpen;
-    return `${helpFabHTML(t)}${rulesOpen ? rulesModalHTML(t) : ""}`;
+    const aboutOpen = model.ui?.aboutOpen ?? model.aboutOpen;
+    return `${helpFabHTML(t)}${aboutFabHTML(t)}${rulesOpen ? rulesModalHTML(t) : ""}${aboutOpen ? aboutModalHTML(t) : ""}`;
 }
 
 /**

@@ -1264,6 +1264,119 @@ button.icon-toggle {
     letter-spacing: 0;
 }
 
+/* --- the colophon: the scribe's closing note, and its mark ---------------- */
+
+/* The mirror of the help mark, in the opposite corner: same bare-oak chrome,
+   so the two read as a pair of tabs pinned to the table, not to the sheet. */
+.about-fab {
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    z-index: 8;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px 8px 10px;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #cbb994;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(233, 221, 193, 0.22);
+    border-bottom-width: 1px;
+}
+
+.about-fab:hover {
+    background: rgba(0, 0, 0, 0.65);
+    border-color: var(--gold);
+    color: var(--vellum);
+}
+
+.about-fab-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    font-size: 15px;
+    line-height: 1;
+    color: var(--gold);
+    letter-spacing: 0;
+}
+
+/* Narrower than the other modals: a colophon is a closing note, not a page. */
+.colophon {
+    width: min(460px, 100%);
+    padding: 40px 40px 32px;
+    text-align: center;
+    gap: 0;
+}
+
+.colophon-mark {
+    font-size: 1.7rem;
+    line-height: 1;
+    color: var(--gold);
+    margin-bottom: 10px;
+}
+
+.colophon h2 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.26em;
+    color: var(--gules);
+    margin-bottom: 22px;
+}
+
+.colophon-flourish {
+    width: 88px;
+    height: 1px;
+    margin: 0 auto 22px;
+    background: linear-gradient(90deg, transparent, rgba(43, 33, 24, 0.45), transparent);
+}
+
+/* Full width, not shrink-to-fit: .modal centres its flex children, and a
+   shrink-wrapped paragraph gives the floated versal nothing to sit beside. */
+.colophon p {
+    width: 100%;
+    font-size: 1.02rem;
+    line-height: 1.72;
+    color: var(--ink);
+    margin-bottom: 16px;
+}
+
+.colophon-origin {
+    font-style: italic;
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+}
+
+/* The versal — the illuminated initial that opens the note. */
+.colophon .versal {
+    float: left;
+    margin: 2px 10px -4px 0;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 3.3rem;
+    line-height: 0.82;
+    color: var(--gules);
+}
+
+/* The devised sentence wraps around the versal, so it cannot be centred. */
+.colophon-devised {
+    text-align: left;
+}
+
+.colophon a {
+    color: var(--gules);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.colophon .primary {
+    margin-top: 6px;
+}
+
 .lang-toggle {
     font-variant-numeric: tabular-nums;
 }
@@ -1393,12 +1506,18 @@ button.icon-toggle {
         --log-rows: 4;
     }
 
-    .help-fab-text {
+    .help-fab-text,
+    .about-fab-text {
         display: none;
     }
 
-    .help-fab {
+    .help-fab,
+    .about-fab {
         padding: 9px;
+    }
+
+    .colophon {
+        padding: 28px 24px 24px;
     }
 }
 

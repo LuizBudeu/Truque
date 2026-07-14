@@ -312,6 +312,59 @@ body::after{
 }
 .toggle button[aria-pressed="true"]{ background:var(--gold); color:#241B12; border-color:var(--gold); }
 
+/* ============================================================
+   COLOPHON — the scribe's closing note, in a modal
+   ============================================================ */
+.about-btn{
+  position:fixed; left:20px; top:22px; z-index:100;
+  cursor:pointer; padding:9px 18px;
+  font-family:'EB Garamond',serif; font-size:.72rem;
+  text-transform:uppercase; letter-spacing:.16em;
+  color:#CBB994; background:rgba(0,0,0,.35);
+  border:1px solid rgba(233,221,193,.24);
+}
+.about-btn:hover{ color:var(--gold); border-color:var(--gold); }
+.about-btn:focus-visible{ outline:2px solid var(--gold); outline-offset:3px; }
+
+.veil{
+  position:fixed; inset:0; z-index:200; display:none;
+  place-items:center; padding:24px;
+  background:rgba(12,8,4,.72);
+}
+.veil.on{ display:grid }
+
+.colophon{ width:min(460px,94vw); text-align:center; padding:40px 40px 32px; }
+.colophon .mark{
+  font-size:1.7rem; line-height:1; color:var(--gold);
+  margin-bottom:10px;
+}
+.colophon h2{
+  font-family:'Grenze Gotisch',serif; font-weight:600; font-size:1.05rem;
+  text-transform:uppercase; letter-spacing:.26em; color:var(--gules);
+  margin-bottom:22px;
+}
+.colophon .flourish{
+  width:88px; height:1px; margin:0 auto 22px;
+  background:linear-gradient(90deg,transparent,rgba(43,33,24,.45),transparent);
+}
+.colophon p{
+  font-size:1.02rem; line-height:1.72; color:var(--ink);
+  margin-bottom:16px;
+}
+.colophon p.origin{
+  font-style:italic; color:var(--ink-soft); font-size:.95rem;
+}
+.colophon .who{ font-weight:600; }
+.colophon a{ color:var(--gules); text-decoration:underline; text-underline-offset:3px; }
+.colophon .close{ margin-top:14px; }
+
+/* a versal — the illuminated initial that opens the note */
+.colophon .versal{
+  float:left; margin:2px 10px -4px 0;
+  font-family:'Grenze Gotisch',serif; font-weight:700;
+  font-size:3.3rem; line-height:.82; color:var(--gules);
+}
+
 @media (max-width:960px){
   .spread{ grid-template-columns:1fr; }
   .margin{ order:-1 }
@@ -617,6 +670,35 @@ body::after{
 </div>
 
 
+<!-- ================= COLOPHON ================= -->
+<button class="about-btn" id="about-open">About</button>
+
+<div class="veil" id="veil" role="dialog" aria-modal="true" aria-labelledby="colo-title">
+  <div class="colophon vellum">
+    <div class="mark" aria-hidden="true">⚜</div>
+    <h2 id="colo-title">Colophon</h2>
+    <div class="flourish"></div>
+
+    <p>
+      <span class="versal">T</span>ruqué was devised by
+      <span class="who">[Name]</span>, <span class="who">[Name]</span>,
+      <span class="who">[Name]</span> and <span class="who">[Name]</span>
+      for <em>[Course]</em> at <em>[Institution]</em>, [term] of [year].
+    </p>
+
+    <p class="origin">
+      It began as a printed board and a deck of cards on a classroom table.
+    </p>
+
+    <p>
+      This digital edition was made by <span class="who">[Name]</span>.<br>
+      The original rules may be read <a href="#">here</a>.
+    </p>
+
+    <button class="btn close" id="about-close">Close</button>
+  </div>
+</div>
+
 <!-- mock-only screen switch -->
 <div class="toggle" role="group" aria-label="Preview screen">
   <button id="t-table" aria-pressed="true">Table</button>
@@ -642,6 +724,21 @@ body::after{
   // cards lift and mark as selected — the only interaction in this mock
   document.querySelectorAll('.card').forEach(c => {
     c.addEventListener('click', () => c.classList.toggle('sel'));
+  });
+
+  // colophon
+  const veil = document.getElementById('veil');
+  const openBtn = document.getElementById('about-open');
+  const closeBtn = document.getElementById('about-close');
+
+  const openAbout = () => { veil.classList.add('on'); closeBtn.focus(); };
+  const closeAbout = () => { veil.classList.remove('on'); openBtn.focus(); };
+
+  openBtn.addEventListener('click', openAbout);
+  closeBtn.addEventListener('click', closeAbout);
+  veil.addEventListener('click', e => { if (e.target === veil) closeAbout(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && veil.classList.contains('on')) closeAbout();
   });
 </script>
 </body>

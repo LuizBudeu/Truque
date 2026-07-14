@@ -12,6 +12,7 @@ import {
   messages,
 } from '../client/js/i18n.js';
 import { renderApp } from '../client/js/render.js';
+import { CREDITS } from '../client/js/ui/about.js';
 import { nextSeat, buildModel, buildViewModel } from '../client/js/store.js';
 import { getPlayerView } from '../shared/views.js';
 import { C, makeState, autoPlay } from './helpers.js';
@@ -123,6 +124,35 @@ describe('floating rules help', () => {
     const pt = renderApp(buildModel(makeState(), 0, ui({ rulesOpen: true, lang: 'pt' })));
     assert.ok(pt.includes('Como jogar'));
     assert.ok(pt.includes('Objetivo'));
+  });
+});
+
+describe('colophon (about)', () => {
+  test('the about FAB is present on menu and game, opens the colophon', () => {
+    assert.ok(renderApp({ screen: 'menu', lang: 'en' }).includes('data-action="open-about"'));
+    const game = renderApp(buildModel(makeState(), 0, ui()));
+    assert.ok(game.includes('data-action="open-about"'));
+    assert.ok(!game.includes('data-action="close-about"')); // modal closed by default
+  });
+
+  test('the colophon renders the credits, translated, with a versal', () => {
+    const en = renderApp(buildModel(makeState(), 0, ui({ aboutOpen: true })));
+    assert.ok(en.includes('Colophon'));
+    assert.ok(en.includes('was devised by'));
+    assert.ok(en.includes(CREDITS.developer));
+    assert.ok(en.includes(`<span class="versal">T</span>`)); // the illuminated initial
+    assert.ok(en.includes('data-action="close-about"'));
+    const pt = renderApp(buildModel(makeState(), 0, ui({ aboutOpen: true, lang: 'pt' })));
+    assert.ok(pt.includes('Colofão'));
+    assert.ok(pt.includes('foi concebido por'));
+  });
+
+  test('the author list uses the language\'s conjunction', () => {
+    const en = renderApp(buildModel(makeState(), 0, ui({ aboutOpen: true })));
+    const pt = renderApp(buildModel(makeState(), 0, ui({ aboutOpen: true, lang: 'pt' })));
+    const [last] = CREDITS.authors.slice(-1);
+    assert.ok(en.includes(`and ${last}`));
+    assert.ok(pt.includes(`e ${last}`));
   });
 });
 
