@@ -117,6 +117,21 @@ describe('phase-specific affordances', () => {
     assert.ok(html.includes('data-action="skip-swap"'));
   });
 
+  test('a manilha-rank card in hand wears the gold spark, and only it', () => {
+    const s = makeState({ manilha: 9, manilhaCard: C(9, 'clubs') });
+    const html = renderApp(buildModel(s, 0, ui()));
+    // Hand is 2♥ 5♠ 9♦ Q♥ — the 9 rules the round, the other three do not.
+    assert.equal(html.match(/class="card-spark"/g).length, 1);
+    assert.ok(/data-card="9-diamonds"[^>]*>(?:(?!<\/button>).)*card-spark/s.test(html));
+  });
+
+  test('a void seal sparks nothing: no manilha, no gold', () => {
+    // Default state: J♣ drawn, so manilha is null (Rulebook 2.7) — and player 0
+    // holds a J-adjacent court card (Q♥) plus numbers; none of them rule.
+    const html = renderApp(buildModel(makeState(), 0, ui()));
+    assert.ok(!html.includes('card-spark'));
+  });
+
   test('open play: the endangered player sees the opponent\'s revealed card', () => {
     const s0 = makeState({ positions: [0, 7] });
     const s1 = applyAction(s0, { type: 'PLAY_CARD', player: 1, card: C(7, 'spades') });

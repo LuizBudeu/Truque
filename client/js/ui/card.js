@@ -22,13 +22,18 @@ const isCourt = (rank) => rank >= 11;
 
 /**
  * @param {{rank: number, suit: string}} card
- * @param {{selected?: boolean, action?: string|null, index?: number, small?: boolean}} [opts]
+ * @param {{selected?: boolean, action?: string|null, index?: number, small?: boolean, spark?: string|null}} [opts]
  *   With `action` set the card is an interactive button carrying
- *   data-action/data-index; otherwise it is a static element.
+ *   data-action/data-index; otherwise it is a static element. `spark` is the
+ *   label for the gold star pinned to the card — set it only when the card
+ *   rules the round (see handHTML); it is the caller's job to know that.
  * @returns {string}
  */
-export function cardHTML(card, { selected = false, action = null, index = null, small = false } = {}) {
-  const cls = ['card', `suit-${card.suit}`, selected && 'selected', small && 'small']
+export function cardHTML(
+  card,
+  { selected = false, action = null, index = null, small = false, spark = null } = {},
+) {
+  const cls = ['card', `suit-${card.suit}`, selected && 'selected', small && 'small', spark && 'sparked']
     .filter(Boolean)
     .join(' ');
   const rank = rankLabel(card.rank);
@@ -36,7 +41,8 @@ export function cardHTML(card, { selected = false, action = null, index = null, 
   const center = isCourt(card.rank)
     ? `<span class="card-center court">${rank}</span>`
     : `<span class="card-center">${suitGlyphHTML(card.suit)}</span>`;
-  const inner = `${corner}${center}<span class="card-corner mirrored"><b>${rank}</b>${suitGlyphHTML(card.suit)}</span>`;
+  const star = spark ? `<span class="card-spark" title="${spark}"></span>` : '';
+  const inner = `${corner}${center}<span class="card-corner mirrored"><b>${rank}</b>${suitGlyphHTML(card.suit)}</span>${star}`;
   const identity = `data-card="${card.rank}-${card.suit}"`;
   if (action === null) return `<span class="${cls}" ${identity}>${inner}</span>`;
   return `<button type="button" class="${cls}" ${identity} data-action="${action}" data-index="${index}">${inner}</button>`;

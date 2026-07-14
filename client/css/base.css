@@ -35,6 +35,10 @@
     --p1: var(--gules);
     --p1-soft: #c87a6b;
 
+    /* The eight-pointed star, drawn once: the fantasy ♥ (magic) glyph, the gold
+       spark on a manilha card in hand, and the tab icon (client/favicon.svg). */
+    --spark-star: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 1.4 13.9 9 21.5 12 13.9 15 12 22.6 10.1 15 2.5 12 10.1 9Z'/></svg>");
+
     --rule: 1px solid rgba(43, 33, 24, 0.22);
 
     --display: "Grenze Gotisch", "EB Garamond", Georgia, serif;

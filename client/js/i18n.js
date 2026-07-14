@@ -165,6 +165,7 @@ export const messages = {
         "hand.yours": "Your hand",
         "hand.playerN": ({ n }) => `Player ${n}'s hand`,
         "hand.youPlayed": "You played",
+        "hand.manilhaCard": "Manilha — worth 14 this round",
 
         // --- piles & manilha ---
         "piles.deck": "Deck",
@@ -367,6 +368,7 @@ export const messages = {
         "hand.yours": "Sua mão",
         "hand.playerN": ({ n }) => `Mão do Jogador ${n}`,
         "hand.youPlayed": "Você jogou",
+        "hand.manilhaCard": "Manilha — vale 14 nesta rodada",
 
         // --- piles & manilha ---
         "piles.deck": "Baralho",

@@ -157,7 +157,7 @@
 
 /* ♥ magic — ignores distance entirely */
 .theme-fantasy .suit-glyph[data-suit="hearts"] {
-    --glyph: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 1.4 13.9 9 21.5 12 13.9 15 12 22.6 10.1 15 2.5 12 10.1 9Z'/></svg>");
+    --glyph: var(--spark-star);
 }
 
 /* ♣ the manilha deck — crossed blades, the rank that rules the round */
@@ -284,6 +284,51 @@
     justify-content: center;
     gap: 16px;
     flex-wrap: wrap;
+}
+
+/* --- the manilha spark -----------------------------------------------------
+   A card of the manilha rank rules the round (Rulebook 2.7), so it is
+   illuminated: a gold star pinned to the top-right corner — the same
+   eight-pointed mark the fantasy theme uses for magic, and the tab icon. Gold
+   leaf is reserved for the moment that matters, and this is one of them. */
+
+.card.sparked {
+    box-shadow:
+        0 0 0 1px rgba(176, 132, 47, 0.55),
+        3px 3px 0 rgba(43, 33, 24, 0.35);
+}
+
+.card-spark {
+    position: absolute;
+    top: -9px;
+    right: -9px;
+    width: 22px;
+    height: 22px;
+    background-color: var(--gold);
+    -webkit-mask: var(--spark-star) center / contain no-repeat;
+    mask: var(--spark-star) center / contain no-repeat;
+    filter: drop-shadow(0 0 4px rgba(176, 132, 47, 0.5));
+    animation: spark-twinkle 2.4s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.card.small .card-spark {
+    width: 14px;
+    height: 14px;
+    top: -6px;
+    right: -6px;
+}
+
+@keyframes spark-twinkle {
+    0%,
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 0.85;
+    }
+    50% {
+        transform: scale(1.12) rotate(22deg);
+        opacity: 1;
+    }
 }
 
 button.card {
