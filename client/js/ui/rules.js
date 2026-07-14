@@ -31,7 +31,7 @@ export function rulesModalHTML(t) {
   // data-action="noop" keeps clicks inside the panel from hitting the backdrop.
   return `
     <div class="modal-backdrop" data-action="close-rules">
-      <div class="modal rules-modal" data-action="noop">
+      <div class="modal rules-modal vellum" data-action="noop">
         <h2>${t('help.title')}</h2>
         <div class="rules-body">${sections}</div>
         <button type="button" class="primary" data-action="close-rules">${t('common.close')}</button>

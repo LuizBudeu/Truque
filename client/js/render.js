@@ -7,9 +7,12 @@
  * that main.js layers on afterwards from animate.js plans — this module only
  * describes the FINAL state of the current model.
  *
- * The game screen mirrors Figure 2 of the rulebook: opponent's face-down
- * hand on top, then the table (draw/graveyard piles · towers + hex board ·
- * manilha cluster), the round-result panel, the action zone, own hand below.
+ * The game screen is a manuscript spread. A vellum FIELD SHEET carries the
+ * public record in Figure 2's order — opponent's face-down hand at the head,
+ * then piles · manilha seal, the towers-and-hexes board, the modifier
+ * medallions — and closes with the prompt, the single live decision. The
+ * MARGIN column beside it holds reference only (last duel, round log, suit
+ * cycle), and your own hand sits on its own sheet below.
  *
  * The same screen serves hotseat and online: `model.online` switches player
  * labels ("You" vs "Player N"), enables the waiting states for the
@@ -33,6 +36,7 @@ import { revealHTML } from "./ui/reveal.js";
 import { suitCycleHTML } from "./ui/cycle.js";
 import { roundLogHTML } from "./ui/log.js";
 import { graveyardHTML } from "./ui/graveyard.js";
+import { maniculeHTML } from "./ui/manicule.js";
 import { cardHTML } from "./ui/card.js";
 import { helpFabHTML, rulesModalHTML } from "./ui/rules.js";
 
@@ -62,6 +66,42 @@ function langToggleHTML(t, lang) {
               title="${t("lang.title", { name: meta.name })}">🌐 ${meta.label}</button>`;
 }
 
+/**
+ * Where the manicule points — the game's single attention pointer.
+ *
+ * A scribe drew a pointing hand in the margin to say "here: THIS is the thing".
+ * So it marks whatever the game is waiting on, and it is the only such mark on
+ * the screen: the opponent's head while it is on them, your hand while you must
+ * choose a card, the prompt while there is a button to press. Nothing else in
+ * the UI competes to say "your turn".
+ *
+ * Pure derivation from the view — no new state, and the same rule in hotseat
+ * (where the rendered seat is always the one to act) and online.
+ *
+ * @returns {'opponent'|'hand'|'prompt'}
+ */
+export function maniculeFocus(model) {
+    const { view, seat } = model;
+    switch (view.phase) {
+        case "SWAP_WINDOW":
+            // Rulebook 2.10: once your window is closed, it is on them.
+            return view.swapDone[seat] ? "opponent" : "prompt";
+        case "PICK_CARDS": {
+            if (view.selfCommitted) return "opponent";
+            // Rulebook 2.9: in the danger zone you wait for their open card first.
+            const selfEndangered = view.positions[seat] === DANGER_SPACES[seat];
+            const opponentEndangered = view.positions[1 - seat] === DANGER_SPACES[1 - seat];
+            const openPlay = selfEndangered !== opponentEndangered;
+            if (openPlay && selfEndangered && !view.openCard) return "opponent";
+            return "hand"; // the choice is a card, so point at the cards
+        }
+        case "WINNER_MOVE":
+            return model.move ? "prompt" : "opponent";
+        default:
+            return "prompt"; // GAME_OVER: the rematch/leave buttons
+    }
+}
+
 /** "You" online (the other seat is elsewhere); "Player N" in hotseat/labels. */
 function playerName(t, index, youIndex, online) {
     if (index === youIndex) return t("player.you");
@@ -69,22 +109,27 @@ function playerName(t, index, youIndex, online) {
     return t("player.n", { n: index + 1 });
 }
 
+/** The crossed-swords crest at the head of the proclamation (defs in index.html). */
+const crestHTML = () => `<svg class="menu-crest" aria-hidden="true"><use href="#swords"/></svg>`;
+
+/** The entry screen: a proclamation nailed to the door. */
 function menuHTML(model, t, lang) {
     const hotseat = model.hotseatEnabled
         ? `
-      <div class="menu-section">
-        <button type="button" data-action="new-game">${t("menu.newHotseat")}</button>
-        <p class="hint">${t("menu.hotseatHint")}</p>
-      </div>`
+        <div class="menu-divider">${t("menu.or")}</div>
+        <div class="menu-section">
+          <button type="button" data-action="new-game">${t("menu.newHotseat")}</button>
+          <p class="hint">${t("menu.hotseatHint")}</p>
+        </div>`
         : "";
     return `
     <div class="screen menu">
       <div class="top-controls">${langToggleHTML(t, lang)}</div>
-      <div class="menu-crest">⚔</div>
-      <h1>Truqué</h1>
-      <p class="tagline">${t("menu.tagline")}</p>
-      ${model.error ? `<p class="error">${model.error}</p>` : ""}
-      <div class="menu-panel">
+      <div class="menu-panel vellum">
+        ${crestHTML()}
+        <h1>Truqué</h1>
+        <p class="tagline">${t("menu.tagline")}</p>
+        ${model.error ? `<p class="error">${model.error}</p>` : ""}
         <div class="menu-section">
           <button type="button" class="primary" data-action="create-room">${t("menu.createRoom")}</button>
           <p class="hint">${t("menu.createHint")}</p>
@@ -94,7 +139,7 @@ function menuHTML(model, t, lang) {
           <div class="join-row">
             <input id="join-code" type="text" maxlength="6" placeholder="${t("menu.roomCodePlaceholder")}"
                    autocomplete="off" autocapitalize="characters" spellcheck="false" />
-            <button type="button" class="primary" data-action="join-room">${t("menu.joinRoom")}</button>
+            <button type="button" data-action="join-room">${t("menu.joinRoom")}</button>
           </div>
         </div>
         ${hotseat}
@@ -107,19 +152,21 @@ function lobbyHTML(model, t) {
     const status = model.connection === "open" ? t("lobby.waiting") : t("lobby.connecting");
     return `
     <div class="screen menu lobby">
-      <div class="menu-crest">⚔</div>
-      <h1>Truqué</h1>
-      <p class="tagline">${t("lobby.roomCode")}</p>
-      <p class="room-code">${model.roomCode ?? "····"}</p>
-      <p class="hint">${t("lobby.shareHint")}</p>
-      <div class="buttons">
-        <button type="button" class="primary" data-action="copy-link"${model.roomCode ? "" : " disabled"}>
-          ${model.copied ? t("lobby.linkCopied") : t("lobby.copyLink")}
-        </button>
-      </div>
-      <p class="instructions">${status}</p>
-      <div class="buttons">
-        <button type="button" data-action="leave-room">${t("common.cancel")}</button>
+      <div class="menu-panel vellum">
+        ${crestHTML()}
+        <h1>Truqué</h1>
+        <p class="tagline">${t("lobby.roomCode")}</p>
+        <p class="room-code">${model.roomCode ?? "····"}</p>
+        <p class="hint">${t("lobby.shareHint")}</p>
+        <div class="menu-section">
+          <button type="button" class="primary" data-action="copy-link"${model.roomCode ? "" : " disabled"}>
+            ${model.copied ? t("lobby.linkCopied") : t("lobby.copyLink")}
+          </button>
+        </div>
+        <p class="instructions">${status}</p>
+        <div class="menu-section">
+          <button type="button" data-action="leave-room">${t("common.cancel")}</button>
+        </div>
       </div>
     </div>`;
 }
@@ -137,7 +184,7 @@ function curtainHTML(model, t) {
         : "";
     return `
     <div class="screen curtain${model.ui.fantasySuits ? " theme-fantasy" : ""}">
-      <div class="curtain-panel">
+      <div class="curtain-panel vellum">
         ${result}
         <h2>${t("curtain.pass", { n: seat + 1 })}</h2>
         <button type="button" class="primary" data-action="continue">${t("curtain.continue", { n: seat + 1 })}</button>
@@ -145,19 +192,33 @@ function curtainHTML(model, t) {
     </div>`;
 }
 
+/**
+ * The spread: a field sheet on the left, a true margin column on the right,
+ * and, below it in the same column, your own hand on its own sheet. The field
+ * sheet carries the whole public record of the game (opponent, piles, manilha
+ * seal, board, modifiers) and ends with the prompt — the one live decision,
+ * marked with a manicule. The margin holds reference material only: the last
+ * duel, the round log, and the suit cycle. Nothing there is ever clicked to
+ * play — which is why it lives in a column that cannot move the play column.
+ */
 function gameHTML(model, t) {
     const { view, ui } = model;
     const over = view.phase === "GAME_OVER";
     const youIndex = model.online ? view.playerIndex : null;
     const labels = [0, 1].map((i) => playerName(t, i, youIndex, model.online));
     const lang = ui.lang ?? DEFAULT_LANG;
-    // The last round lives in the sidebar (with the suit-cycle reference), not
-    // center stage: the board and the action zone are what the player scans.
-    const sidebar = `
+    const focus = maniculeFocus(model);
+    // The inner wrapper is load-bearing, not decoration: on the desktop spread
+    // it is taken out of flow so the margin contributes NO height to the grid
+    // row. Reference material must never be able to push the play column — and
+    // with it, your hand — down the page as the round log grows. See base.css.
+    const margin = `
       <aside class="game-side">
-        ${view.lastResolution ? `<section class="panel reveal-panel"><h3 class="side-title">${t("side.lastRound")}</h3>${revealHTML(view.lastResolution, { t, labels, youIndex, small: true })}</section>` : ""}
-        ${roundLogHTML(view, { t, labels, youIndex })}
-        ${suitCycleHTML(t)}
+        <div class="margin-inner">
+          ${view.lastResolution ? `<section class="panel reveal-panel"><h3 class="side-title">${t("side.lastRound")}</h3>${revealHTML(view.lastResolution, { t, labels, youIndex, small: true })}</section>` : ""}
+          ${roundLogHTML(view, { t, labels, youIndex })}
+          ${suitCycleHTML(t)}
+        </div>
       </aside>`;
     return `
     <div class="screen game${ui.fantasySuits ? " theme-fantasy" : ""}">
@@ -165,18 +226,22 @@ function gameHTML(model, t) {
       ${connectionBannerHTML(model, t)}
       <div class="game-body">
         <div class="game-main">
-          <section class="table">
-            ${opponentHTML(view, { t, online: model.online })}
-            <div class="table-center">
+          <section class="field-sheet vellum">
+            ${opponentHTML(view, { t, online: model.online, manicule: focus === "opponent" })}
+            <div class="field-top">
               ${pilesHTML(view, t)}
-              ${boardHTML(view, t)}
               ${manilhaHTML(view, t)}
+              <div></div>
+            </div>
+            ${boardHTML(view, t)}
+            <div class="prompt">
+              <span class="manicule-slot">${focus === "prompt" ? maniculeHTML() : ""}</span>
+              <div class="prompt-body">${actionZoneHTML(model, t)}</div>
             </div>
           </section>
-          <section class="panel action-zone">${actionZoneHTML(model, t)}</section>
-          ${over ? "" : handHTML(view, ui, { t, online: model.online })}
+          ${over ? "" : handHTML(view, ui, { t, online: model.online, manicule: focus === "hand" })}
         </div>
-        ${sidebar}
+        ${margin}
       </div>
       ${ui.graveyardOpen ? graveyardHTML(view, t) : ""}
     </div>`;

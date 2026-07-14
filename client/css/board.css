@@ -1,248 +1,297 @@
-/* The battlefield: castle towers, 12 hexagonal spaces (Figure 2), banner
-   pawns, danger-zone glow, and the distance/buff bar. */
+/* The battlefield, drawn as a woodcut on the field sheet: two oak towers, 12
+   stone hexes (Figure 2), heraldic pennants for pawns, and the modifier
+   medallions below.
+
+   Every shape is a clip-path drawn TWICE — an ink-coloured element with a
+   slightly inset ::before on top — because clip-path cannot carry a stroke and
+   the heavy outline is what makes this read as a print rather than a gradient. */
 
 .board-zone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
 }
 
 .battlefield {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
-/* --- hex spaces ------------------------------------------------------------ */
+/* --- hex spaces ----------------------------------------------------------- */
 
 .board {
-  display: flex;
+    display: flex;
+    margin-right: 5px;
 }
 
 .space {
-  position: relative;
-  width: 56px;
-  height: 54px;
-  margin-right: -7px; /* nest the hex points like the printed board */
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    position: relative;
+    width: 56px;
+    height: 54px;
+    margin-right: -7px; /* nest the hex points, like the printed board */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.space-hex,
+.space-hex::before {
+    position: absolute;
+    clip-path: polygon(0 50%, 22% 0, 78% 0, 100% 50%, 78% 100%, 22% 100%);
 }
 
 .space-hex {
-  position: absolute;
-  inset: 3px 0;
-  clip-path: polygon(0 50%, 22% 0, 78% 0, 100% 50%, 78% 100%, 22% 100%);
-  background: linear-gradient(180deg, #3d4658, #2c3342);
-  box-shadow: inset 0 0 0 40px rgba(255, 255, 255, 0.02);
+    inset: 3px 0;
+    background: var(--ink); /* the outline */
 }
 
-/* Danger spaces smoulder — the first space on each side (Rulebook 2.9). */
-.space.danger .space-hex {
-  background: linear-gradient(180deg, #55333a, #3a2029);
+.space-hex::before {
+    content: "";
+    inset: 1.6px 2px;
+    background: linear-gradient(180deg, #c9b893, #ab9871); /* the stone */
 }
 
-/* Full alarm only when someone actually stands there. */
-.space.danger.has-pawn .space-hex {
-  background: linear-gradient(180deg, #7a3038, #521f27);
-  animation: danger-pulse 1.4s ease-in-out infinite;
+/* The danger spaces are inked red on the board itself (Rulebook 2.9) — a
+   player can see where the edge is without being told. */
+.space.danger .space-hex::before {
+    background: linear-gradient(180deg, #b04434, #92301f);
+}
+
+/* Full alarm only once someone actually stands there. */
+.space.danger.has-pawn .space-hex::before {
+    animation: danger-pulse 1.4s ease-in-out infinite;
 }
 
 @keyframes danger-pulse {
-  50% {
-    filter: brightness(1.45);
-  }
+    50% {
+        filter: brightness(1.35);
+    }
 }
 
-/* --- towers ------------------------------------------------------------------ */
+/* --- towers --------------------------------------------------------------- */
+
+.tower,
+.tower::before {
+    clip-path: polygon(0% 100%, 0% 14%, 12% 14%, 12% 0%, 30% 0%, 30% 14%, 44% 14%, 44% 0%, 56% 0%, 56% 14%, 70% 14%, 70% 0%, 88% 0%, 88% 14%, 100% 14%, 100% 100%);
+}
 
 .tower {
-  width: 40px;
-  height: 84px;
-  clip-path: polygon(
-    0% 100%, 0% 14%, 12% 14%, 12% 0%, 30% 0%, 30% 14%,
-    44% 14%, 44% 0%, 56% 0%, 56% 14%,
-    70% 14%, 70% 0%, 88% 0%, 88% 14%, 100% 14%, 100% 100%
-  );
-  background: linear-gradient(180deg, #4a5163, #31374a 70%, #262b3a);
-  flex-shrink: 0;
+    position: relative;
+    width: 40px;
+    height: 84px;
+    flex-shrink: 0;
+    background: var(--ink);
 }
 
-.tower.alert {
-  animation: tower-alert 1.4s ease-in-out infinite;
+.tower::before {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    background: linear-gradient(180deg, #5b4832, #4a3a28 60%, #382b1d);
+}
+
+.tower.alert::before {
+    animation: tower-alert 1.4s ease-in-out infinite;
 }
 
 @keyframes tower-alert {
-  0%,
-  100% {
-    background: linear-gradient(180deg, #6e3a44, #4a2530 70%, #341a22);
-  }
-  50% {
-    background: linear-gradient(180deg, #94434e, #613039 70%, #442129);
-    filter: brightness(1.25);
-  }
+    0%,
+    100% {
+        background: linear-gradient(180deg, #6e3a2c, #52281d 60%, #3d1e15);
+    }
+    50% {
+        background: linear-gradient(180deg, #a33b2c, #7c2c20 60%, #5c2118);
+    }
 }
 
-/* --- pawns ------------------------------------------------------------------- */
+/* --- pawns: heraldic pennants ---------------------------------------------- */
+
+.pawn,
+.pawn::before {
+    clip-path: polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%);
+}
 
 .pawn {
-  position: relative;
-  z-index: 1;
-  width: 34px;
-  height: 44px;
-  clip-path: polygon(0 0, 100% 0, 100% 76%, 50% 100%, 0 76%);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 8px;
-  color: white;
-  font-weight: 700;
-  font-size: 13px;
-  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.5));
-  will-change: transform;
+    position: relative;
+    z-index: 1;
+    width: 34px;
+    height: 44px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 6px;
+    background: var(--vellum); /* the pennant's pale border */
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--vellum);
+    filter: drop-shadow(0 3px 4px rgba(43, 33, 24, 0.45));
+    will-change: transform;
+}
+
+.pawn::before {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    background: var(--pawn-color);
 }
 
 .pawn-flag {
-  pointer-events: none;
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
 }
 
 .pawn-p0 {
-  background: linear-gradient(180deg, var(--p0-soft), var(--p0) 45%, #35599c);
+    --pawn-color: var(--azure);
 }
 
 .pawn-p1 {
-  background: linear-gradient(180deg, var(--p1-soft), var(--p1) 45%, #a4571f);
+    --pawn-color: var(--gules);
 }
 
-/* --- distance / buff bar ------------------------------------------------------- */
+/* --- modifier medallions (Rulebook 2.6, Table 1) ---------------------------
+   Inked marks, not pills: the icon, the number, the name — nothing else. */
 
-.buff-bar {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
+.mods {
+    display: flex;
+    justify-content: center;
+    gap: 26px;
+    flex-wrap: wrap;
 }
 
-.buff-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 3px 11px;
+.mod {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 56px;
+    text-align: center;
 }
 
-.buff-chip b {
-  color: var(--ink-light);
-  font-size: 13px;
+.mod .ico {
+    font-size: 17px;
+    line-height: 1;
+    color: var(--ink);
 }
 
-.buff-chip i {
-  font-style: normal;
-  font-size: 14px;
+.mod .val {
+    font-family: var(--display);
+    font-size: 1.2rem;
+    line-height: 1;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
 }
 
-.buff-chip.suit-hearts i {
-  color: #e06c75;
+.mod .lbl {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-soft);
 }
 
-.buff-chip.suit-diamonds i {
-  color: #e5b567;
+.mod.buffed .val {
+    color: var(--azure);
 }
 
-.buff-chip.suit-spades i {
-  color: #c3cddf;
+.mod.nerfed .val {
+    color: var(--gules);
 }
 
-.buff-chip.buffed {
-  border-color: rgba(120, 190, 120, 0.55);
+/* The distance is the cause; the modifiers are its effects — set it apart. */
+.mod.distance {
+    padding-right: 22px;
+    margin-right: 4px;
+    border-right: var(--rule);
 }
 
-.buff-chip.buffed b {
-  color: #8fd18f;
+.mod.distance .val {
+    font-size: 1.5rem;
 }
 
-.buff-chip.nerfed {
-  border-color: rgba(224, 82, 82, 0.45);
-}
-
-.buff-chip.nerfed b {
-  color: #e58a8a;
-}
-
-.buff-chip.distance {
-  background: var(--panel-strong);
-}
-
-/* --- responsive ------------------------------------------------------------------ */
+/* --- responsive ------------------------------------------------------------ */
 
 @media (max-width: 900px) {
-  .space {
-    width: 44px;
-    height: 44px;
-    margin-right: -5px;
-  }
+    .space {
+        width: 44px;
+        height: 44px;
+        margin-right: -5px;
+    }
 
-  .space-hex {
-    inset: 2px 0;
-  }
+    .space-hex {
+        inset: 2px 0;
+    }
 
-  .pawn {
-    width: 26px;
-    height: 34px;
-    font-size: 10px;
-    padding-top: 5px;
-  }
+    .pawn {
+        width: 26px;
+        height: 34px;
+        font-size: 11px;
+        padding-top: 4px;
+    }
 
-  .tower {
-    width: 32px;
-    height: 66px;
-  }
+    .tower {
+        width: 32px;
+        height: 66px;
+    }
+
+    .mods {
+        gap: 18px;
+    }
 }
 
-/* Phones: the full 12-space board must fit ~340px without scrolling. */
+/* Phones: the whole 12-space board must fit ~340px without the page scrolling. */
 @media (max-width: 600px) {
-  .battlefield {
-    gap: 3px;
-    /* Safety net for the very narrowest phones (≤320px): the board scrolls
-       inside itself rather than forcing the whole page to scroll sideways. */
-    max-width: 100%;
-    overflow-x: auto;
-    padding-block: 4px;
-  }
+    .battlefield {
+        gap: 2px;
+        /* Safety net for the very narrowest phones (≤320px): the board scrolls
+       inside itself rather than forcing the page to scroll sideways. */
+        max-width: 100%;
+        overflow-x: auto;
+        padding-block: 4px;
+    }
 
-  .space {
-    width: 26px;
-    height: 30px;
-    margin-right: -3px;
-  }
+    .space {
+        width: 26px;
+        height: 30px;
+        margin-right: -3px;
+    }
 
-  .space-hex {
-    inset: 1px 0;
-  }
+    .space-hex {
+        inset: 1px 0;
+    }
 
-  .pawn {
-    width: 18px;
-    height: 24px;
-    font-size: 8px;
-    padding-top: 3px;
-  }
+    .space-hex::before {
+        inset: 1.2px 1.5px;
+    }
 
-  .tower {
-    width: 20px;
-    height: 46px;
-  }
+    .pawn {
+        width: 18px;
+        height: 24px;
+        font-size: 8px;
+        padding-top: 2px;
+    }
 
-  .board-zone {
-    gap: 7px;
-  }
+    .pawn::before {
+        inset: 1.5px;
+    }
 
-  .buff-chip {
-    font-size: 11px;
-    padding: 2px 8px;
-  }
+    .tower {
+        width: 20px;
+        height: 46px;
+    }
+
+    .mods {
+        gap: 12px;
+    }
+
+    .mod {
+        min-width: 44px;
+    }
+
+    .mod.distance {
+        padding-right: 12px;
+        margin-right: 0;
+    }
 }

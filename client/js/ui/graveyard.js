@@ -9,7 +9,7 @@ export function graveyardHTML(view, t) {
   // data-action="noop" keeps clicks inside the panel from hitting the backdrop.
   return `
     <div class="modal-backdrop" data-action="close-graveyard">
-      <div class="modal" data-action="noop">
+      <div class="modal vellum" data-action="noop">
         <h2>${t('grave.title', { n: view.graveyard.length })}</h2>
         <div class="graveyard-cards">${cards}</div>
         <button type="button" data-action="close-graveyard">${t('common.close')}</button>

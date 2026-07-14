@@ -1,7 +1,8 @@
 /**
  * The battlefield: two castle towers flanking 12 hexagonal spaces (Figure 2
- * of the rulebook), banner pawns, danger-zone alerts, and the always-visible
- * distance/modifier bar so players can read the current ♠/♦ buffs at a glance.
+ * of the rulebook), heraldic pennants for pawns, danger-zone alerts, and the
+ * always-visible modifier medallions so players can read the current ♠/♦ buffs
+ * at a glance.
  */
 
 import { BOARD_SIZE, DANGER_SPACES, distanceBetween, distanceModifier } from '../../../shared/rules.js';
@@ -34,23 +35,29 @@ export function boardHTML(view, t) {
         <div class="board">${spaces.join('')}</div>
         ${towerR}
       </div>
-      ${buffBarHTML(view.positions, t)}
+      ${modsHTML(view.positions, t)}
     </div>`;
 }
 
-/** Rulebook 2.6, Table 1 — live readout of the distance modifiers. */
-function buffBarHTML(positions, t) {
+/**
+ * Rulebook 2.6, Table 1 — live readout of the distance modifiers, struck as
+ * medallions: the distance is the cause (set apart by a rule), the three suit
+ * marks are its effects.
+ */
+function modsHTML(positions, t) {
   const d = distanceBetween(positions);
-  const chip = (suit, label) => {
+  const medallion = (suit, label) => {
     const mod = distanceModifier(suit, d);
     const tone = mod > 0 ? 'buffed' : mod < 0 ? 'nerfed' : 'neutral';
-    return `<span class="buff-chip suit-${suit} ${tone}">${suitGlyphHTML(suit)} ${label} <b>${signed(mod)}</b></span>`;
+    // Kept on one line: the class and its value must stay adjacent for the
+    // markup assertions in test/ui.test.js.
+    return `<div class="mod suit-${suit} ${tone}"><span class="ico">${suitGlyphHTML(suit)}</span><span class="val">${signed(mod)}</span><span class="lbl">${label}</span></div>`;
   };
   return `
-    <div class="buff-bar">
-      <span class="buff-chip distance">${t('buff.distance')} <b>${d}</b></span>
-      ${chip('spades', t('buff.sword'))}
-      ${chip('diamonds', t('buff.bow'))}
-      ${chip('hearts', t('buff.magic'))}
+    <div class="mods">
+      <div class="mod distance"><span class="val">${d}</span><span class="lbl">${t('buff.distance')}</span></div>
+      ${medallion('spades', t('buff.sword'))}
+      ${medallion('diamonds', t('buff.bow'))}
+      ${medallion('hearts', t('buff.magic'))}
     </div>`;
 }

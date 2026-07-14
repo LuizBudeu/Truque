@@ -38,16 +38,40 @@ function logRowHTML(entry, { t, labels, youIndex }) {
       : entry.winner === youIndex
         ? t('log.youWon')
         : t('log.wonBy', { label: labels[entry.winner] });
+  // Won/lost is only meaningful when one of the seats is ours (online).
+  const tone =
+    entry.winner === 'tie' || youIndex === null ? '' : entry.winner === youIndex ? ' won' : ' lost';
   return `
     <li class="log-entry">
-      <span class="log-round">${t('log.round', { n: entry.round })}</span>
+      <span class="log-round">${roman(entry.round)}</span>
       <span class="log-cards">
         ${miniCardHTML(entry.cards[0], entry.winner === 0)}
         <span class="log-vs">·</span>
         ${miniCardHTML(entry.cards[1], entry.winner === 1)}
       </span>
-      <span class="log-outcome">${outcome}</span>
+      <span class="log-outcome${tone}">${outcome}</span>
     </li>`;
+}
+
+/** Rounds are numbered in the margin as a scribe would: I, II, III, IV… */
+const NUMERALS = [
+  [10, 'X'],
+  [9, 'IX'],
+  [5, 'V'],
+  [4, 'IV'],
+  [1, 'I'],
+];
+
+function roman(n) {
+  let out = '';
+  let left = n;
+  for (const [value, letters] of NUMERALS) {
+    while (left >= value) {
+      out += letters;
+      left -= value;
+    }
+  }
+  return out;
 }
 
 /** Rank + suit glyph only — a card small enough to sit inline in a log row. */

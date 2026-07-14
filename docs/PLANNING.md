@@ -248,6 +248,29 @@ _Rationale: debugging rules and networking at the same time is miserable. Rules 
 
 **Done when:** the group would happily demo it in class.
 
+### Phase 6 — Art direction: illuminated manuscript on oak _(done)_
+
+A second visual pass, replacing Phase 4's dark-panel look with the direction in
+`docs/truque-design-mock.html` (the static mock is the reference; it holds no
+game logic). Two materials — dark oak (the table) and vellum (the sheets you
+play on) — six inks, and no rounded glowing panels anywhere.
+
+- Type: Grenze Gotisch (display) + EB Garamond (text), from Google Fonts, with a
+  serif fallback stack so an offline load degrades rather than breaks.
+- Layout is a manuscript spread: a vellum **field sheet** (opponent's head ·
+  piles + manilha · board · modifier medallions · the prompt) beside a true
+  **margin** column of marginalia (last duel, round log in roman numerals, suit
+  cycle), with your own hand on its own sheet below.
+- The manicule (☞) marks the one live decision, and appears nowhere else.
+- The manilha resolves into a **wax seal** rather than a card: it leaves a ruling,
+  not a card in play (grey and void for a face card / Ace, per Rulebook 2.7).
+- Fantasy suits are now inked `mask-image` shapes taking `currentColor`, not
+  emoji — the `.suit-glyph[data-suit]` markup contract is unchanged, so this
+  stayed a pure CSS swap.
+
+**Done when:** every screen reads as one artefact, and nothing in the diff
+touched `/shared`, the reducer, or the protocol.
+
 ## 5. Coding conventions
 
 - English for all identifiers, comments, commits, and docs. Domain term kept: `manilha`.
@@ -290,6 +313,7 @@ _Rationale: debugging rules and networking at the same time is miserable. Rules 
 - [x] Phase 3 — online play between two machines
 - [x] Phase 4 — visual pass complete
 - [x] Phase 5 — demo-ready
+- [x] Phase 6 — art direction reworked to the manuscript mock
 
 ## 10. Open rule questions (decision log)
 

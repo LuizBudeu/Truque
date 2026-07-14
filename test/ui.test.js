@@ -178,8 +178,8 @@ describe('phase-specific affordances', () => {
     const html = renderApp(buildModel(s, 0, ui()));
     assert.ok(html.includes('Round history'));
     assert.ok(html.includes('class="round-log"'));
-    // Newest round (R2) is rendered before the oldest (R1).
-    assert.ok(html.indexOf('R2') < html.indexOf('R1'));
+    // Rounds are lettered in the margin as roman numerals, newest (II) first.
+    assert.ok(html.indexOf('>II<') < html.indexOf('>I<'));
   });
 
   test('graveyard modal lists the public discards', () => {
@@ -319,9 +319,9 @@ describe('full-game render sweep', () => {
 });
 
 describe('phase 4 visuals', () => {
-  test('buff bar reads the current distance modifiers (Rulebook 2.6, Table 1)', () => {
+  test('modifier medallions read the current distance (Rulebook 2.6, Table 1)', () => {
     const html = renderApp(buildModel(makeState({ positions: [4, 5] }), 0, ui()));
-    assert.ok(html.includes('Distance <b>0</b>'));
+    assert.ok(/mod distance[^>]*>\s*<span class="val">0<\/span>/.test(html));
     assert.ok(/suit-spades buffed[^>]*>.*\+3/.test(html)); // ♠ close-range buff
     assert.ok(/suit-diamonds nerfed[^>]*>.*-2/.test(html)); // ♦ close-range nerf
   });
@@ -404,6 +404,65 @@ describe('phase 4 visuals', () => {
     // The markup is theme-agnostic: suit marks are empty data-suit elements,
     // so no literal glyph swap can desync the two themes.
     assert.ok(fantasy.includes('data-suit="hearts"'));
+  });
+
+  test('the manicule points at whatever the game is waiting on', () => {
+    const atOpponent = (h) => /<div class="sheet-head">\s*<span class="manicule/.test(h);
+    const atHand = (h) => /<div class="hand-head">\s*<span class="manicule/.test(h);
+    const atPrompt = (h) => /<span class="manicule-slot"><span class="manicule/.test(h);
+
+    // Swap window: on you until you close it, then on them.
+    const swapping = makeState({ phase: 'SWAP_WINDOW', swapDone: [false, false] });
+    assert.ok(atPrompt(renderApp(onlineModel(swapping, 0))));
+    const swapDone = makeState({ phase: 'SWAP_WINDOW', swapDone: [true, false] });
+    assert.ok(atOpponent(renderApp(onlineModel(swapDone, 0))));
+
+    // Pick: the choice is a card, so it points at the cards — until you commit.
+    const picking = makeState(); // default phase is PICK_CARDS
+    assert.ok(atHand(renderApp(onlineModel(picking, 0))));
+    const committed = applyAction(picking, {
+      type: 'PLAY_CARD',
+      player: 0,
+      card: C(2, 'hearts'),
+    });
+    assert.ok(atOpponent(renderApp(onlineModel(committed, 0))));
+
+    // Rulebook 2.9: in the danger zone you wait for their open card first.
+    assert.ok(atOpponent(renderApp(onlineModel(makeState({ positions: [0, 7] }), 0))));
+
+    // Winner's move: on the winner, so the loser sees it sitting on them.
+    const moving = makeState({
+      phase: 'WINNER_MOVE',
+      positions: [4, 8],
+      lastResolution: {
+        winner: 0,
+        cards: [C(9, 'diamonds'), C(7, 'spades')],
+        effectiveValues: [9, 7],
+        manilha: null,
+        usedSuitCycle: false,
+        inverted: false,
+        buffsRemoved: false,
+        loserEffect: { type: 'RETREAT', amount: 1 },
+        winnerMoveRange: 2,
+        distance: 3,
+      },
+    });
+    assert.ok(atPrompt(renderApp(onlineModel(moving, 0))));
+    assert.ok(atOpponent(renderApp(onlineModel(moving, 1))));
+  });
+
+  test('never two manicules: it is the ONE attention pointer', () => {
+    const count = (html) => (html.match(/class="manicule idle"/g) ?? []).length;
+    for (const seed of [17, 51]) {
+      autoPlay(seed, {
+        onStep: (state) => {
+          for (const seat of [0, 1]) {
+            assert.equal(count(renderApp(onlineModel(state, seat))), 1, `seed ${seed} seat ${seat}`);
+            assert.equal(count(renderApp(buildModel(state, seat, ui()))), 1, `seed ${seed} hotseat ${seat}`);
+          }
+        },
+      });
+    }
   });
 
   test('the last-round box sits in the sidebar, not the main column', () => {

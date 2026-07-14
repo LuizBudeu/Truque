@@ -1,1097 +1,1413 @@
-/* Phase 4 art direction — global theme, layout, screens, panels, HUD,
-   curtain, modal. Board pieces live in board.css, cards in cards.css.
-   Palette: night-battlefield backdrop, parchment cards, two banner colors
-   (azure P1, ember P2), gold for the manilha/winner accents. */
+/* Visual direction: an illuminated manuscript laid on an oak table.
+   Two materials only — dark oak (the table, the margin) and vellum (the
+   sheets you actually play on). Structure, type and rules; board pieces live
+   in board.css, cards in cards.css.
+
+   Palette discipline: six inks, each earned from the subject. Nothing here is
+   a rounded, glowing panel — surfaces are torn parchment, borders are
+   hairlines, and the only radius in the game is a wax seal. */
 
 * {
-  box-sizing: border-box;
-  margin: 0;
+    box-sizing: border-box;
+    margin: 0;
 }
 
 :root {
-  /* backdrop */
-  --night-0: #0e1219;
-  --night-1: #182030;
-  --panel: rgba(255, 255, 255, 0.045);
-  --panel-strong: rgba(255, 255, 255, 0.08);
-  --line: rgba(255, 255, 255, 0.12);
-  /* text on dark */
-  --ink-light: #e9e4d6;
-  --muted: #96a0b4;
-  /* players & accents */
-  --p0: #4d7fd6;
-  --p0-soft: #9db9ea;
-  --p1: #d97f35;
-  --p1-soft: #ecb488;
-  --gold: #d9a441;
-  --danger: #e05252;
-  /* parchment (cards) */
-  --parchment: #f4ecd8;
-  --card-ink: #2b2318;
+    /* --- the six inks --- */
+    --oak: #241b12; /* the table */
+    --oak-deep: #140e08; /* vignette, recesses */
+    --vellum: #e9ddc1; /* aged parchment */
+    --vellum-dim: #d8c8a4; /* parchment in shadow */
+    --ink: #2b2118; /* iron gall — brown-black, never pure black */
+    --ink-soft: #7a6a51; /* faded ink, secondary text */
+    --gules: #a32b1e; /* vermilion — rubrics, danger, P2 */
+    --azure: #2c4b8d; /* lapis — P1 */
+    --gold: #b0842f; /* gold leaf — only for the moment that matters */
 
-  --serif: Georgia, 'Palatino Linotype', 'Times New Roman', serif;
+    /* on-oak text (the margin column reads on the dark table) */
+    --oak-text: #b9a98a;
+    --oak-text-bright: #d9c9a4;
+    --oak-line: rgba(233, 221, 193, 0.14);
+
+    /* player identity, and its readable-on-oak counterpart */
+    --p0: var(--azure);
+    --p0-soft: #8fa9dc;
+    --p1: var(--gules);
+    --p1-soft: #c87a6b;
+
+    --rule: 1px solid rgba(43, 33, 24, 0.22);
+
+    --display: "Grenze Gotisch", "EB Garamond", Georgia, serif;
+    --serif: "EB Garamond", Georgia, "Times New Roman", serif;
+}
+
+/* The whole type scale hangs off the root: every text size in the game is in
+   rem, so this is the one lever that moves all of it. Board and card geometry
+   stay in px on purpose — the pieces should not grow with the copy. */
+html {
+    font-size: 18px;
 }
 
 body {
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  background:
-    radial-gradient(1200px 700px at 50% -10%, var(--night-1), transparent 70%),
-    var(--night-0);
-  color: var(--ink-light);
-  min-height: 100vh;
+    font-family: var(--serif);
+    font-size: 1rem;
+    background: radial-gradient(120% 90% at 50% 0%, #2e241a 0%, var(--oak) 45%, var(--oak-deep) 100%);
+    background-attachment: fixed;
+    color: var(--vellum);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Faint grain over the whole table, so no surface reads as flat CSS. */
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.35;
+    z-index: 99;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='180' height='180' filter='url(%23n)' opacity='.5'/></svg>");
+    mix-blend-mode: overlay;
 }
 
 h1,
 h2,
 h3,
 .brand {
-  font-family: var(--serif);
-  letter-spacing: 0.02em;
+    font-family: var(--display);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+/* The manicule: a pointing hand, as a scribe would draw it in the margin to say
+   "here — THIS is the thing". It is the game's one attention pointer, and it
+   moves: to the opponent's name while it is on them, to your hand while you must
+   choose a card, to the prompt when there is a button to press. Never twice on
+   a screen. Where it points is decided in render.js (maniculeFocus).
+
+   It sways, slowly, the way a hand held out and waiting does — which is also
+   what makes the move between anchors read as the same hand, not three marks. */
+.manicule {
+    color: var(--gules);
+    font-style: normal;
+    font-size: 2rem;
+    line-height: 1;
+    flex: none;
+}
+
+.manicule.idle {
+    animation: manicule-sway 2.4s ease-in-out infinite;
+}
+
+@keyframes manicule-sway {
+    50% {
+        transform: translateX(5px);
+    }
+}
+
+/* The prompt keeps the manicule's place whether or not it is pointing here, so
+   the instruction text never shifts sideways as focus moves. */
+.manicule-slot {
+    flex: none;
+    width: 2rem;
+    display: flex;
+    justify-content: center;
 }
 
 .screen {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 22px 20px 56px;
 }
 
 .screen.game {
-  justify-content: flex-start;
-  max-width: 1120px;
-  margin: 0 auto;
+    justify-content: flex-start;
+    max-width: 1240px;
+    margin: 0 auto;
 }
 
-/* --- buttons ------------------------------------------------------------ */
+/* ============================================================
+   VELLUM — the second material. Torn edges, not border-radius.
+   The displacement filter lives on a ::before layer so the text
+   painted above it stays perfectly crisp.
+   ============================================================ */
+
+.vellum {
+    position: relative;
+    padding: 20px 24px;
+}
+
+.vellum::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: radial-gradient(140% 100% at 15% 0%, #f1e7cf 0%, var(--vellum) 45%, var(--vellum-dim) 100%);
+    filter: url(#deckle) drop-shadow(0 14px 26px rgba(0, 0, 0, 0.55));
+}
+
+/* Fibre and foxing — very light, or it reads as dirt rather than age. */
+.vellum::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.3;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='4'/></filter><rect width='240' height='240' filter='url(%23f)' opacity='.55'/></svg>");
+    mix-blend-mode: multiply;
+}
+
+.vellum > * {
+    position: relative;
+    z-index: 1;
+    color: var(--ink);
+}
+
+/* --- buttons: pressed into the vellum, no radius ------------------------- */
 
 button {
-  font: inherit;
-  padding: 8px 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel-strong);
-  color: var(--ink-light);
-  cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+    font-family: var(--serif);
+    font-size: 0.94rem;
+    letter-spacing: 0.05em;
+    padding: 9px 18px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--ink);
+    border-bottom-width: 3px;
+    border-radius: 0;
+    transition:
+        transform 0.12s ease,
+        background 0.12s ease,
+        color 0.12s ease;
 }
 
 button:hover:not(:disabled) {
-  border-color: var(--muted);
-  background: rgba(255, 255, 255, 0.14);
+    background: var(--ink);
+    color: var(--vellum);
+}
+
+button:active:not(:disabled) {
+    transform: translateY(2px);
+    border-bottom-width: 1px;
 }
 
 button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+    opacity: 0.38;
+    cursor: not-allowed;
 }
 
 button.primary {
-  background: linear-gradient(180deg, #5a8be0, #3f6cbd);
-  border-color: #6b97e4;
-  color: white;
-  font-weight: 600;
+    background: var(--ink);
+    color: var(--vellum);
 }
 
 button.primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #6b97e4, #4a77c8);
+    background: var(--gules);
+    border-color: var(--gules);
 }
 
 button.selected {
-  outline: 2px solid var(--gold);
-  outline-offset: 1px;
-  border-color: var(--gold);
-  color: var(--gold);
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--oak);
+    font-weight: 600;
 }
 
 button.danger {
-  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
-  color: var(--danger);
-  background: transparent;
+    color: var(--gules);
+    border-color: rgba(163, 43, 30, 0.55);
 }
 
 button.danger:hover:not(:disabled) {
-  background: rgba(224, 82, 82, 0.12);
-  border-color: var(--danger);
+    background: var(--gules);
+    border-color: var(--gules);
+    color: var(--vellum);
 }
 
-button.subtle {
-  font-size: 13px;
-  padding: 5px 11px;
-}
-
-button.icon-toggle {
-  padding: 5px 9px;
-  line-height: 1;
-}
-
-.concede-confirm {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--danger);
-  font-weight: 600;
-  font-size: 14px;
+button:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 3px;
 }
 
 .buttons {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
-/* --- menu & lobby --------------------------------------------------------- */
+/* --- chrome buttons: these sit on the OAK, not on vellum ----------------- */
+
+button.subtle,
+.hud button {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    padding: 5px 10px;
+    color: #cbb994;
+    border: 1px solid rgba(233, 221, 193, 0.22);
+    border-bottom-width: 1px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+button.subtle:hover:not(:disabled),
+.hud button:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.45);
+    border-color: rgba(233, 221, 193, 0.5);
+    color: var(--vellum);
+}
+
+.hud button.danger {
+    color: #e0a197;
+    border-color: rgba(163, 43, 30, 0.55);
+}
+
+.hud button.danger:hover:not(:disabled) {
+    background: var(--gules);
+    color: var(--vellum);
+}
+
+button.icon-toggle {
+    padding: 4px 9px;
+    line-height: 1.2;
+}
+
+.concede-confirm {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #e0a197;
+    font-size: 0.86rem;
+    font-style: italic;
+}
+
+/* ============================================================
+   ENTRY — a proclamation nailed to the door
+   ============================================================ */
 
 .menu {
-  justify-content: center;
-  position: relative;
-}
-
-.menu-crest {
-  font-size: 40px;
-  color: var(--gold);
-  text-shadow: 0 0 24px rgba(217, 164, 65, 0.4);
-}
-
-.menu h1 {
-  font-size: 56px;
-  color: var(--ink-light);
-  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
-}
-
-.tagline {
-  color: var(--muted);
-  font-size: 17px;
-}
-
-.hint {
-  color: var(--muted);
-  font-size: 13px;
+    justify-content: center;
+    position: relative;
 }
 
 .menu-panel {
-  margin-top: 14px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 24px 32px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    width: min(430px, 92vw);
+    text-align: center;
+    padding: 36px 34px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+}
+
+.menu-crest {
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 10px;
+    color: var(--gules);
+    display: block;
+}
+
+.menu h1 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 3.6rem;
+    line-height: 1;
+    color: var(--ink);
+}
+
+.tagline {
+    margin: 10px 0 24px;
+    font-style: italic;
+    color: var(--ink-soft);
+    font-size: 1rem;
+}
+
+.hint {
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+    font-style: italic;
+    margin-top: 8px;
 }
 
 .menu-divider {
-  color: var(--muted);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 20px 0;
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--ink-soft);
 }
 
 .menu-divider::before,
 .menu-divider::after {
-  content: '';
-  flex: 1;
-  border-top: 1px solid var(--line);
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: rgba(43, 33, 24, 0.25);
 }
 
 .menu-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
 }
 
+/* Only a section's OWN button spans the sheet — the Join button lives inside
+   the join row, where the input must keep the space. */
+.menu-section > button {
+    width: 100%;
+}
+
+/* The join row reads as one pressed-in field: input and button share a border. */
 .join-row {
-  display: flex;
-  gap: 8px;
+    display: flex;
+    gap: 0;
 }
 
 .join-row input {
-  font: inherit;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  width: 154px;
-  text-transform: uppercase;
-  text-align: center;
-  letter-spacing: 2px;
-  background: rgba(0, 0, 0, 0.3);
-  color: var(--ink-light);
+    flex: 1;
+    min-width: 0;
+    font-family: var(--display);
+    font-size: 1rem;
+    padding: 10px 14px;
+    letter-spacing: 0.32em;
+    text-align: center;
+    text-transform: uppercase;
+    background: rgba(43, 33, 24, 0.06);
+    color: var(--ink);
+    border: 1px solid var(--ink);
+    border-right: 0;
+    border-bottom-width: 3px;
+}
+
+.join-row input::placeholder {
+    color: rgba(43, 33, 24, 0.35);
+    letter-spacing: 0.32em;
 }
 
 .join-row input:focus {
-  outline: 2px solid var(--p0);
-  border-color: transparent;
+    outline: none;
+    background: rgba(176, 132, 47, 0.14);
+}
+
+.join-row button {
+    flex: none;
+    white-space: nowrap;
 }
 
 .error {
-  color: var(--danger);
-  font-weight: 600;
+    color: var(--gules);
+    font-weight: 600;
+    margin-bottom: 12px;
 }
 
-.room-code {
-  font-family: var(--serif);
-  font-size: 44px;
-  font-weight: 700;
-  letter-spacing: 10px;
-  color: var(--gold);
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 10px 18px 10px 28px;
+/* Lobby: the room code is the proclamation's seal-worthy line. */
+.lobby .room-code {
+    font-family: var(--display);
+    font-size: 3rem;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    color: var(--gules);
+    padding: 6px 0 6px 0.3em; /* the trailing letter-space, given back */
+    border-top: var(--rule);
+    border-bottom: var(--rule);
+    margin: 6px 0 10px;
 }
 
-.banner {
-  width: 100%;
-  max-width: 1280px;
-  border-radius: 8px;
-  padding: 8px 14px;
-  text-align: center;
-  font-size: 14px;
+.lobby .instructions {
+    margin: 16px 0 12px;
 }
 
-.banner.warning {
-  background: rgba(217, 164, 65, 0.14);
-  border: 1px solid rgba(217, 164, 65, 0.5);
-  color: #ecd39c;
+/* Menu/lobby corner cluster for the language chip (in-game the banner has it). */
+.top-controls {
+    position: absolute;
+    top: 18px;
+    right: 20px;
+    display: flex;
+    gap: 8px;
+    z-index: 2;
 }
 
-/* --- HUD ------------------------------------------------------------------ */
+/* ============================================================
+   BANNER (the HUD) — a headline rule across the top of the page
+   ============================================================ */
 
 .hud {
-  width: 100%;
-  max-width: 1280px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 8px 16px;
-  font-size: 14px;
+    width: 100%;
+    max-width: 1240px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(233, 221, 193, 0.16);
 }
 
 .hud-left,
 .hud-right {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.hud-right {
+    margin-left: auto;
+    align-items: center;
 }
 
 .brand {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--gold);
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--gold);
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
 }
 
 .hud-stat {
-  color: var(--muted);
+    font-family: var(--display);
+    font-size: 1.15rem;
+    color: var(--vellum);
+    opacity: 0.9;
 }
 
 .hud-phase {
-  font-family: var(--serif);
-  font-style: italic;
-  color: var(--ink-light);
+    font-style: italic;
+    color: #b8a483;
 }
 
-.seat-badge {
-  padding: 2px 12px;
-  border-radius: 999px;
-  color: white;
-  font-weight: 600;
-  font-size: 13px;
+/* Chips are inked outlines, not filled pills — this is a page, not a dashboard. */
+.seat-badge,
+.status-chip {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    padding: 4px 10px;
+    white-space: nowrap;
+    border: 1px solid rgba(233, 221, 193, 0.22);
+    background: rgba(0, 0, 0, 0.2);
+    color: #cbb994;
 }
 
 .seat-badge.seat-0 {
-  background: linear-gradient(180deg, var(--p0), #3a63ad);
+    color: #c9d6f2;
+    border-color: rgba(108, 146, 214, 0.5);
 }
 
 .seat-badge.seat-1 {
-  background: linear-gradient(180deg, var(--p1), #b0622a);
+    color: #e0a197;
+    border-color: rgba(163, 43, 30, 0.55);
 }
 
-.status-chip {
-  font-size: 12px;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 2px 10px;
-  white-space: nowrap;
+/* On vellum (the field sheet's head) the chips ink themselves instead. */
+.vellum .seat-badge,
+.vellum .status-chip {
+    background: transparent;
+    border-color: rgba(43, 33, 24, 0.28);
+    color: var(--ink-soft);
+}
+
+.vellum .seat-badge.seat-0 {
+    color: var(--azure);
+    border-color: rgba(44, 75, 141, 0.45);
+}
+
+.vellum .seat-badge.seat-1 {
+    color: var(--gules);
+    border-color: rgba(163, 43, 30, 0.45);
 }
 
 .status-chip.committed {
-  color: var(--gold);
-  border-color: color-mix(in srgb, var(--gold) 60%, transparent);
-  animation: chip-pulse 1.6s ease-in-out infinite;
+    color: var(--gules);
+    border-color: rgba(163, 43, 30, 0.5);
+    animation: chip-pulse 1.6s ease-in-out infinite;
 }
 
 @keyframes chip-pulse {
-  50% {
-    box-shadow: 0 0 10px rgba(217, 164, 65, 0.45);
-  }
+    50% {
+        background: rgba(163, 43, 30, 0.14);
+    }
 }
 
-/* --- game layout: main column + reference sidebar ---------------------------- */
+.banner.warning {
+    width: 100%;
+    max-width: 1240px;
+    padding: 8px 14px;
+    text-align: center;
+    font-style: italic;
+    font-size: 0.9rem;
+    color: #e0a197;
+    border: 1px solid rgba(163, 43, 30, 0.45);
+    background: rgba(163, 43, 30, 0.1);
+}
 
+/* ============================================================
+   SPREAD — the field sheet, plus a true margin column
+   ============================================================ */
+
+/* align-items must stay `stretch` (the default): the margin column is sized BY
+   the row, it does not size it. See .game-side below. */
 .game-body {
-  width: 100%;
-  max-width: 1280px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 12px;
+    width: 100%;
+    max-width: 1240px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 250px;
+    gap: 34px;
 }
+
+/* --- the play column: the field sheet, and your hand beneath it ------------ */
 
 .game-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
-.game-side {
-  width: 250px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  position: sticky;
-  top: 14px;
-}
-
-.game-side .panel {
-  width: 100%;
-}
-
-.side-title {
-  font-size: 13px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-/* Sidebar reveal: tighter than the old center-stage version. */
-.game-side .reveal-cards {
-  gap: 10px;
-}
-
-.game-side .reveal-vs {
-  font-size: 16px;
-}
-
-.game-side .reveal-outcome {
-  font-size: 14px;
-}
-
-.game-side .badges .badge {
-  font-size: 11px;
-}
-
-/* --- round-history log ---------------------------------------------------------- */
-
-.log-panel {
-  align-items: stretch;
-}
-
-.round-log {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  width: 100%;
-  max-height: 220px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.log-entry {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 6px;
-  border-radius: 6px;
-  font-size: 12px;
-}
-
-.log-entry:nth-child(odd) {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.log-round {
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-
-.log-cards {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  justify-content: center;
-}
-
-.log-card {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 1px;
-  font-weight: 700;
-  color: var(--ink-light);
-  opacity: 0.75;
-}
-
-.log-card.won {
-  opacity: 1;
-  color: var(--gold);
-}
-
-.log-vs {
-  color: var(--muted);
-  opacity: 0.6;
-}
-
-.log-outcome {
-  color: var(--muted);
-  text-align: right;
-  white-space: nowrap;
-}
-
-/* Suit tints on the dark panel (mirrors the buff-bar / cycle inks). */
-.log-card.suit-hearts .suit-glyph {
-  color: #e06c75;
-}
-
-.log-card.suit-diamonds .suit-glyph {
-  color: #e5b567;
-}
-
-.log-card.suit-spades .suit-glyph {
-  color: #c3cddf;
-}
-
-.log-card.won .suit-glyph {
-  color: inherit;
-}
-
-/* --- suit-cycle reference ------------------------------------------------------ */
-
-.cycle-panel {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.cycle-panel h3 {
-  font-size: 13px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.cycle-triangle {
-  position: relative;
-  width: 110px;
-  height: 92px;
-}
-
-.cycle-corner {
-  position: absolute;
-  font-size: 24px;
-  line-height: 1;
-}
-
-.cycle-corner.corner-top {
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.cycle-corner.corner-right {
-  bottom: 0;
-  right: 8px;
-}
-
-.cycle-corner.corner-left {
-  bottom: 0;
-  left: 8px;
-}
-
-/* Board-side suit tints read on the dark panel (card tints are for parchment). */
-.cycle-corner.suit-hearts {
-  color: #e06c75;
-}
-
-.cycle-corner.suit-diamonds {
-  color: #e5b567;
-}
-
-.cycle-corner.suit-spades {
-  color: #c3cddf;
-}
-
-.cycle-arrows {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  color: var(--gold);
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  opacity: 0.85;
-}
-
-.cycle-note {
-  font-size: 11px;
-  color: var(--muted);
-  text-align: center;
-  max-width: 200px;
-}
-
-@media (max-width: 1120px) {
-  .game-body {
+    display: flex;
     flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+}
+
+.field-sheet {
+    min-width: 0;
+}
+
+.sheet-head {
+    display: flex;
     align-items: center;
-  }
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+    border-bottom: var(--rule);
+}
 
-  .game-side {
-    position: static;
-    width: 100%;
-    max-width: 1060px;
-    flex-direction: row;
-    align-items: stretch;
-  }
+.sheet-head .who {
+    font-family: var(--display);
+    font-size: 1.05rem;
+    color: var(--gules);
+}
 
-  .game-side .panel,
-  .game-side .cycle-panel {
+.sheet-head .opponent-hand {
+    display: flex;
+    gap: 6px;
+}
+
+.sheet-head .status-chip {
+    margin-left: auto;
+}
+
+/* piles left · the manilha seal centered · the board below both */
+.field-top {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 6px;
+}
+
+/* The live decision, with the manicule pointing at it. */
+.prompt {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-top: 14px;
+    margin-top: 4px;
+    border-top: var(--rule);
+}
+
+.prompt-body {
+    display: flex;
     flex: 1;
-  }
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    min-width: 0;
 }
 
-/* --- table ------------------------------------------------------------------ */
-
-.table {
-  width: 100%;
-  max-width: 1060px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 10px 14px 12px;
+.prompt-body .instructions {
+    flex: 1;
+    min-width: 200px;
 }
 
-.opponent-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.opponent-id {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.opponent-hand {
-  display: flex;
-  gap: 4px;
-}
-
-/* Fan the opponent's backs slightly so they read as a held hand. */
-.opponent-hand .card {
-  margin-left: -18px;
-}
-
-.opponent-hand .card:first-child {
-  margin-left: 0;
-}
-
-.table-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-/* --- panels ------------------------------------------------------------------ */
-
-.panel {
-  width: 100%;
-  max-width: 1060px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 8px 16px 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
+.prompt-body .buttons {
+    margin-left: auto;
 }
 
 .instructions {
-  color: var(--muted);
-  text-align: center;
-  font-size: 14px;
+    font-size: 1rem;
+    font-style: italic;
+    color: var(--ink);
 }
 
 .option-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
 .option-label {
-  font-size: 14px;
-  color: var(--muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-soft);
 }
 
+/* Rulebook 2.9 — the open-play notice, lettered as a red-ruled aside. */
 .open-play {
-  background: rgba(224, 82, 82, 0.12);
-  border: 1px solid color-mix(in srgb, var(--danger) 60%, transparent);
-  border-radius: 8px;
-  padding: 8px 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
-  font-size: 14px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    font-size: 0.94rem;
+    color: var(--ink);
+    border-left: 3px solid var(--gules);
+    background: rgba(163, 43, 30, 0.07);
 }
 
 .open-play strong {
-  color: var(--danger);
+    color: var(--gules);
+    font-weight: 600;
 }
 
 .game-over {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  padding: 8px 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
 }
 
 .game-over h2 {
-  font-size: 26px;
-  text-align: center;
+    font-size: 1.9rem;
+    color: var(--ink);
 }
 
 .rematch-notice {
-  color: var(--gold);
-  font-weight: 600;
-  text-align: center;
-  animation: chip-pulse 1.6s ease-in-out infinite;
+    color: var(--gules);
+    font-style: italic;
 }
 
-/* --- reveal panel -------------------------------------------------------------- */
+/* ============================================================
+   MARGIN — marginalia, not panels. Hairlines and rubrics only.
+   Everything here sits directly on the oak.
+   ============================================================ */
 
-.reveal {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
+/* A grid row is as tall as its tallest item, so a margin that grows with the
+   round log would drive the row — and push the hand off the bottom of the
+   page. It must not: the margin is REFERENCE, and reference never moves the
+   play surface.
+
+   So the margin's contents are taken out of flow (.margin-inner is absolute),
+   which leaves .game-side contributing zero height to the row. The row is then
+   sized by the PLAY COLUMN alone — field sheet plus hand — and `stretch` gives
+   the margin that full height back to fill. The marginalia can then run as long
+   as they like: they scroll inside the column, and the page never grows, so the
+   hand sits at the same place at round 30 as at round 1. */
+.game-side {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
 }
 
-.reveal-cards {
-  display: flex;
-  align-items: center;
-  gap: 22px;
+.margin-inner {
+    position: absolute;
+    inset: 0;
+    padding-top: 6px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    /* Last resort only. The log yields first (see .log-panel), so this bites
+       just on a very short column — and then it scrolls rather than clipping
+       the suit cycle out of existence. */
+    overflow-y: auto;
 }
 
-.reveal-side {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+.game-side .panel,
+.cycle-panel {
+    padding: 0 0 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--oak-line);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: none;
 }
 
-.reveal-label {
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+/* The round log is the only thing on this page that grows without bound, so it
+   is the only thing that scrolls. It sits at its natural height while it fits
+   (a short game has no dead space, and the suit cycle stays put under it) and
+   gives ground once it would overrun the column. Everything else in the margin
+   is `flex: none`, so the log is the only member that can yield — which keeps
+   the last duel and the suit cycle pinned and always on screen.
+
+   The selector must out-rank `.game-side .panel` above, which sets flex: none
+   on every margin panel; matched on its own, `.log-panel` loses and the log
+   cannot shrink at all. */
+.game-side .log-panel {
+    flex: 0 1 auto;
+    min-height: 0;
 }
 
-.reveal-side.side-p0 .reveal-label {
-  color: var(--p0-soft);
+.margin-inner > :last-child {
+    border-bottom: 0;
+    margin-bottom: 0;
+    padding-bottom: 0;
 }
 
-.reveal-side.side-p1 .reveal-label {
-  color: var(--p1-soft);
+/* Rubrics: the margin's headings, lettered in red as a rubricator would.
+   They never take the manicule — that mark belongs to the live decision
+   alone, and the margin is reference, not something you act on. */
+.side-title,
+.cycle-panel h3 {
+    font-family: var(--serif);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: #c87a6b;
 }
 
-.reveal-side.winner .reveal-label::after {
-  content: ' ♛';
-  color: var(--gold);
+/* --- the last duel: a ledger line ---------------------------------------- */
+
+.game-side .reveal-cards {
+    gap: 8px;
 }
 
-.reveal-side.winner .card {
-  box-shadow:
-    0 0 0 2px var(--gold),
-    0 0 22px rgba(217, 164, 65, 0.55);
+.game-side .reveal-vs {
+    font-size: 1.1rem;
+    color: var(--gold);
 }
 
-.reveal-vs {
-  font-size: 22px;
-  color: var(--muted);
+.game-side .reveal-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    color: #9e8c6e;
 }
 
-.breakdown {
-  font-size: 13px;
-  color: var(--muted);
+.game-side .reveal-side.side-p0 .reveal-label {
+    color: var(--p0-soft);
 }
 
-.breakdown b {
-  color: var(--ink-light);
-  font-size: 15px;
+.game-side .reveal-side.side-p1 .reveal-label {
+    color: var(--p1-soft);
 }
 
-.breakdown em {
-  font-style: normal;
-  color: var(--gold);
+.game-side .breakdown {
+    font-size: 0.68rem;
+    color: #8e7e62;
+    font-style: italic;
 }
 
-.reveal-outcome {
-  font-family: var(--serif);
-  font-size: 17px;
-  text-align: center;
+.game-side .breakdown b {
+    display: block;
+    font-family: var(--display);
+    font-style: normal;
+    font-size: 1.35rem;
+    color: var(--vellum);
 }
+
+.game-side .breakdown em {
+    color: var(--gold);
+    font-style: italic;
+}
+
+.game-side .reveal-outcome {
+    font-style: italic;
+    font-size: 0.9rem;
+    color: var(--oak-text-bright);
+}
+
+.game-side .badges {
+    gap: 4px;
+}
+
+.game-side .badge {
+    font-size: 0.66rem;
+}
+
+/* --- the rounds ----------------------------------------------------------- */
+
+/* Six rounds deep, then you scroll for the rest. The cap is what stops the log
+   from ever reaching the column's height in the first place, so the marginalia
+   around it never move and the margin itself never scrolls. Expressed in rows
+   rather than pixels, so it stays six rows at any type scale. */
+.round-log {
+    --log-rows: 6;
+    --log-row: 1.75rem;
+    --log-gap: 0.4rem;
+
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--log-gap);
+    max-height: calc(var(--log-rows) * var(--log-row) + (var(--log-rows) - 1) * var(--log-gap));
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 4px; /* room for the scrollbar, off the entries */
+}
+
+/* A row is a fixed height, so "six rows" above is exactly six rows. */
+.log-entry {
+    display: flex;
+    align-items: center;
+    min-height: var(--log-row);
+    gap: 10px;
+    font-size: 0.84rem;
+    color: var(--oak-text);
+    padding-right: 4px; /* room for the scrollbar, off the entries */
+}
+
+/* Roman numerals: the order of the rounds is real information, so it is
+   lettered rather than tallied. */
+.log-round {
+    font-family: var(--display);
+    font-size: 0.95rem;
+    color: var(--gold);
+    min-width: 30px;
+    letter-spacing: 0.06em;
+}
+
+.log-cards {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    color: var(--vellum);
+}
+
+.log-card {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 2px;
+    opacity: 0.8;
+}
+
+.log-card.won {
+    opacity: 1;
+    color: var(--gold);
+}
+
+.log-vs,
+.log-card.won .suit-glyph {
+    color: inherit;
+}
+
+.log-outcome {
+    margin-left: auto;
+    font-size: 0.7rem;
+    font-style: italic;
+    white-space: nowrap;
+    color: var(--oak-text);
+}
+
+.log-outcome.won {
+    color: var(--p0-soft);
+}
+
+.log-outcome.lost {
+    color: var(--p1-soft);
+}
+
+/* --- the suits ------------------------------------------------------------ */
+
+.cycle-panel {
+    align-items: stretch;
+}
+
+.cycle-triangle {
+    position: relative;
+    width: 140px;
+    height: 118px;
+    margin: 2px auto 4px;
+}
+
+.cycle-corner {
+    position: absolute;
+    font-size: 24px;
+    line-height: 1;
+    color: var(--vellum);
+}
+
+.cycle-corner.corner-top {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.cycle-corner.corner-right {
+    bottom: 18px;
+    right: 12px;
+}
+
+.cycle-corner.corner-left {
+    bottom: 18px;
+    left: 12px;
+}
+
+.cycle-arrows {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    color: var(--gold);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+}
+
+.cycle-note {
+    font-size: 0.86rem;
+    color: #9e8c6e;
+    font-style: italic;
+    text-align: center;
+    line-height: 1.45;
+}
+
+/* --- badges (shared: reveal + margin) ------------------------------------- */
 
 .badges {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: center;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .badge {
-  background: rgba(217, 164, 65, 0.14);
-  border: 1px solid rgba(217, 164, 65, 0.5);
-  color: #ecd39c;
-  border-radius: 999px;
-  padding: 2px 10px;
-  font-size: 12px;
+    font-size: 0.7rem;
+    font-style: italic;
+    padding: 2px 8px;
+    color: var(--gold);
+    border: 1px solid rgba(176, 132, 47, 0.45);
 }
 
-/* Reveal choreography: one .animate class on .reveal drives the whole
-   sequence — simultaneous card flips, then breakdown, then outcome. The
-   flip keyframes live in cards.css; delays are choreographed here. */
+/* On vellum a badge is inked, not lit. */
+.vellum .badge {
+    color: #8a6520;
+    border-color: rgba(176, 132, 47, 0.55);
+    background: rgba(176, 132, 47, 0.08);
+}
+
+/* ============================================================
+   REVEAL — used both in the margin and on the hotseat curtain
+   ============================================================ */
+
+.reveal {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.reveal-cards {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.reveal-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+}
+
+.reveal-label {
+    font-size: 0.66rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-soft);
+}
+
+.reveal-side.winner .card {
+    box-shadow:
+        0 0 0 2px var(--gold),
+        3px 3px 0 rgba(43, 33, 24, 0.35);
+}
+
+.reveal-vs {
+    font-size: 1.2rem;
+    color: var(--gold);
+}
+
+.breakdown {
+    font-size: 0.8rem;
+    font-style: italic;
+    color: var(--ink-soft);
+    text-align: center;
+}
+
+.breakdown b {
+    font-family: var(--display);
+    font-style: normal;
+    font-size: 1.3rem;
+    color: var(--ink);
+}
+
+.breakdown em {
+    font-style: italic;
+    color: #8a6520;
+}
+
+.reveal-outcome {
+    font-style: italic;
+    text-align: center;
+    color: var(--ink);
+}
+
+/* Choreography: one .animate class on .reveal drives the whole sequence —
+   the two flips run together, then the maths, then the verdict. The flip
+   keyframes live in cards.css; only the delays are composed here. */
 .reveal.animate .breakdown {
-  animation: fade-up 300ms ease 620ms both;
+    animation: fade-up 300ms ease 620ms both;
 }
 
 .reveal.animate .badges,
 .reveal.animate .reveal-outcome {
-  animation: fade-up 320ms ease 760ms both;
+    animation: fade-up 320ms ease 760ms both;
 }
 
 .reveal.animate .reveal-side.winner .card {
-  animation: winner-glow 420ms ease 700ms both;
+    animation: winner-gild 420ms ease 700ms both;
 }
 
 @keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 
-@keyframes winner-glow {
-  from {
-    box-shadow: none;
-  }
-  to {
-    box-shadow:
-      0 0 0 2px var(--gold),
-      0 0 22px rgba(217, 164, 65, 0.55);
-  }
+@keyframes winner-gild {
+    from {
+        box-shadow: 3px 3px 0 rgba(43, 33, 24, 0.35);
+    }
+    to {
+        box-shadow:
+            0 0 0 2px var(--gold),
+            3px 3px 0 rgba(43, 33, 24, 0.35);
+    }
 }
 
-/* --- curtain ------------------------------------------------------------------ */
+/* ============================================================
+   CURTAIN (hotseat) — the sheet is turned face-down on the table
+   ============================================================ */
 
 .curtain {
-  justify-content: center;
-  background: var(--night-0);
+    justify-content: center;
 }
 
 .curtain-panel {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  color: var(--ink-light);
-  border-radius: 16px;
-  padding: 28px 32px;
-  max-width: 640px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  text-align: center;
-  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.5);
+    width: min(560px, 92vw);
+    padding: 32px 34px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
 }
 
-/* --- modal ----------------------------------------------------------------------- */
+.curtain-panel h2 {
+    font-size: 1.8rem;
+}
+
+.curtain-panel h3 {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--gules);
+}
+
+/* ============================================================
+   MODALS — a loose leaf laid over the page
+   ============================================================ */
 
 .modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(5, 8, 12, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  z-index: 10;
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 6, 3, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 10;
 }
 
+/* A loose leaf laid over the page. The sheet itself never scrolls — its
+   torn-edge layer is painted behind the padding box, so scrolling the sheet
+   would slide the vellum out from under the text. The CONTENTS scroll. */
 .modal {
-  background: var(--night-1);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 20px 24px;
-  max-width: 680px;
-  max-height: 80vh;
-  overflow: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.55);
+    width: min(680px, 100%);
+    max-height: 84vh;
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.modal h2 {
+    font-size: 2rem;
+    color: var(--ink);
 }
 
 .graveyard-cards {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-/* --- language toggle ------------------------------------------------------------- */
-
-.lang-toggle {
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.03em;
-}
-
-/* Menu/lobby corner cluster for the language chip (HUD carries it in-game). */
-.top-controls {
-  position: absolute;
-  top: 14px;
-  right: 16px;
-  display: flex;
-  gap: 8px;
-  z-index: 2;
-}
-
-/* --- floating rules button + modal ------------------------------------------------- */
-
-.help-fab {
-  position: fixed;
-  right: 18px;
-  bottom: 18px;
-  z-index: 8;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px 10px 12px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
-  background: linear-gradient(180deg, rgba(217, 164, 65, 0.16), rgba(217, 164, 65, 0.06)),
-    var(--night-1);
-  color: var(--gold);
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
-  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
-}
-
-.help-fab:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
-  background: linear-gradient(180deg, rgba(217, 164, 65, 0.26), rgba(217, 164, 65, 0.1)),
-    var(--night-1);
-}
-
-.help-fab-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--gold);
-  color: var(--night-0);
-  font-family: var(--serif);
-  font-weight: 700;
-  font-size: 15px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-height: 58vh;
+    overflow-y: auto;
+    padding: 2px;
 }
 
 .rules-modal {
-  max-width: 640px;
-  align-items: stretch;
-  text-align: left;
+    align-items: stretch;
+    text-align: left;
 }
 
 .rules-modal h2 {
-  text-align: center;
+    text-align: center;
 }
 
 .rules-body {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-height: 62vh;
+    overflow-y: auto;
+    padding-right: 4px;
 }
 
 .rules-section h3 {
-  color: var(--gold);
-  font-size: 16px;
-  margin-bottom: 4px;
+    font-size: 1.15rem;
+    color: var(--gules);
+    margin-bottom: 4px;
 }
 
 .rules-section p {
-  color: var(--ink-light);
-  font-size: 14px;
-  line-height: 1.5;
-  margin-top: 2px;
+    color: var(--ink);
+    font-size: 0.95rem;
+    line-height: 1.55;
 }
 
 .rules-section p + p {
-  margin-top: 5px;
+    margin-top: 6px;
 }
 
-@media (max-width: 480px) {
-  .help-fab-text {
-    display: none;
-  }
-  .help-fab {
-    padding: 11px;
-  }
+.rules-section b {
+    color: var(--ink);
+    font-weight: 600;
 }
 
-/* --- phones ------------------------------------------------------------------------- */
+/* --- the help mark: a wax-sealed bookmark in the corner ------------------- */
+
+.help-fab {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 8;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px 8px 10px;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #cbb994;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(233, 221, 193, 0.22);
+    border-bottom-width: 1px;
+}
+
+.help-fab:hover {
+    background: rgba(0, 0, 0, 0.65);
+    border-color: var(--gold);
+    color: var(--vellum);
+}
+
+.help-fab-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%; /* the one true circle: it is a seal */
+    background: var(--gules);
+    color: var(--vellum);
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0;
+}
+
+.lang-toggle {
+    font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 960px) {
+    .game-body {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    /* One column: there is no row to overrun, so the margin goes back into
+       normal flow as a footnote below the play column, laid out as a row. With
+       no column to scroll inside, the log takes a plain cap and its own
+       scroller back. */
+    .game-side {
+        position: static;
+    }
+
+    .margin-inner {
+        position: static;
+        flex-direction: row;
+        gap: 24px;
+        align-items: flex-start;
+        overflow: visible;
+        padding-right: 0;
+        border-top: 1px solid var(--oak-line);
+        padding-top: 18px;
+    }
+
+    .game-side .panel,
+    .cycle-panel {
+        flex: 1;
+        border-bottom: 0;
+        padding-bottom: 0;
+        margin-bottom: 0;
+    }
+
+    /* The six-row cap carries over as-is; nothing here needs to flex. */
+    .round-log {
+        flex: none;
+    }
+}
 
 @media (max-width: 600px) {
-  .screen {
-    padding: 10px 10px 16px;
-    gap: 10px;
-  }
+    /* Ease the scale back down a notch on a phone — the copy has less room. */
+    html {
+        font-size: 17px;
+    }
 
-  .hud {
-    padding: 6px 10px;
-    gap: 8px;
-    font-size: 13px;
-  }
+    .screen {
+        padding: 14px 12px 44px;
+        gap: 12px;
+    }
 
-  .hud-left,
-  .hud-right {
-    gap: 8px;
-  }
+    .hud {
+        gap: 8px 12px;
+        padding-bottom: 8px;
+    }
 
-  .brand {
-    font-size: 17px;
-  }
+    .hud-left,
+    .hud-right {
+        gap: 8px;
+    }
 
-  .game-body,
-  .game-main {
-    gap: 8px;
-  }
+    .hud-right {
+        margin-left: 0;
+    }
 
-  /* Re-stack the sidebar vertically (the 1120px rule laid it out as a row). */
-  .game-side {
-    flex-direction: column;
-  }
+    .brand {
+        font-size: 1.5rem;
+    }
 
-  .table {
-    padding: 8px 8px 10px;
-  }
+    .hud-stat {
+        font-size: 1rem;
+    }
 
-  .table-center {
-    gap: 8px;
-  }
+    .vellum {
+        padding: 16px 14px;
+    }
 
-  .reveal-cards {
-    gap: 14px;
-  }
+    /* Stack the margin's notes again — a row of three is too tight on a phone. */
+    .margin-inner {
+        flex-direction: column;
+        gap: 0;
+    }
 
-  .panel {
-    padding: 8px 10px 10px;
-  }
+    .game-side .panel,
+    .cycle-panel {
+        padding-bottom: 18px;
+        margin-bottom: 18px;
+        border-bottom: 1px solid var(--oak-line);
+    }
 
-  /* Menu & lobby scale down so nothing overflows a 320px screen. */
-  .menu h1 {
-    font-size: 40px;
-  }
+    .field-top {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        gap: 12px;
+    }
 
-  .menu-panel {
-    padding: 18px 18px;
-    width: 100%;
-    max-width: 340px;
-  }
+    .prompt {
+        flex-wrap: wrap;
+    }
 
-  .join-row {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
+    .prompt-body .buttons {
+        margin-left: 0;
+        width: 100%;
+    }
 
-  .join-row input {
-    width: 100%;
-  }
+    .menu h1 {
+        font-size: 2.6rem;
+    }
 
-  .room-code {
-    font-size: 30px;
-    letter-spacing: 6px;
-    padding: 8px 12px 8px 18px;
-  }
+    .menu-panel {
+        padding: 28px 22px 24px;
+    }
 
-  .game-over h2 {
-    font-size: 21px;
-  }
+    .lobby .room-code {
+        font-size: 2rem;
+    }
 
-  .round-log {
-    max-height: 160px;
-  }
+    /* Four rows on a phone — the margin is a footnote there, not a column. */
+    .round-log {
+        --log-rows: 4;
+    }
+
+    .help-fab-text {
+        display: none;
+    }
+
+    .help-fab {
+        padding: 9px;
+    }
 }
 
-/* --- accessibility ----------------------------------------------------------------- */
+/* ============================================================
+   ACCESSIBILITY
+   ============================================================ */
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-delay: 0ms !important;
-    transition-duration: 0.01ms !important;
-  }
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-delay: 0ms !important;
+        transition-duration: 0.01ms !important;
+    }
 }

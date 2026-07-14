@@ -1,105 +1,118 @@
-/* Card faces & backs, hand layout, flip machinery, piles, manilha cluster. */
+/* Cards as woodcut prints — flat colour, heavy outline, hard offset shadow,
+   no radius. Plus the piles, the manilha's wax seal, and the flip machinery. */
 
-/* --- faces ------------------------------------------------------------------ */
+/* --- faces ---------------------------------------------------------------- */
 
 .card {
     position: relative;
-    width: 66px;
-    height: 94px;
-    background: linear-gradient(160deg, rgba(255, 255, 255, 0.5), transparent 40%), var(--parchment);
-    border: 1px solid #c9bb9b;
-    border-radius: 9px;
-    box-shadow:
-        inset 0 0 0 3px var(--parchment),
-        inset 0 0 0 4px #d6c9a8,
-        0 2px 6px rgba(0, 0, 0, 0.4);
+    width: 88px;
+    height: 126px;
+    flex: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 0;
-    color: var(--card-ink);
-    flex-shrink: 0;
+    background: linear-gradient(165deg, #f3ead4, #dfd0ae);
+    border: 2px solid var(--ink);
+    border-radius: 0;
+    box-shadow: 3px 3px 0 rgba(43, 33, 24, 0.35);
+    color: var(--ink);
     transition:
-        transform 140ms ease,
-        box-shadow 140ms ease;
+        transform 0.16s ease,
+        box-shadow 0.16s ease;
 }
 
+/* The engraved keyline inside the border. */
+.card::after {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border: 1px solid rgba(43, 33, 24, 0.35);
+    pointer-events: none;
+}
+
+/* Card typography is in px, not rem: a card is a fixed-size object, so its
+   lettering must not grow with the page's type scale. */
 .card-corner {
     position: absolute;
-    top: 5px;
-    left: 7px;
+    top: 6px;
+    left: 8px;
     display: flex;
     flex-direction: column;
     align-items: center;
     line-height: 1;
-    font-weight: 700;
-    font-size: 14px;
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 23px;
 }
 
-.card-corner i {
-    font-style: normal;
+.card-corner .suit-glyph {
     font-size: 12px;
+    margin-top: 2px;
 }
 
 .card-corner.mirrored {
     top: auto;
     left: auto;
-    bottom: 5px;
-    right: 7px;
+    bottom: 6px;
+    right: 8px;
     transform: rotate(180deg);
 }
 
 .card-center {
-    font-size: 30px;
+    font-size: 40px;
     line-height: 1;
 }
 
 .card-center.court {
-    font-family: var(--serif);
-    font-size: 34px;
-    font-weight: 700;
+    font-family: var(--display);
+    font-size: 46px;
+    font-weight: 600;
 }
 
 .card.small {
-    width: 46px;
-    height: 64px;
-    border-radius: 7px;
-    box-shadow:
-        inset 0 0 0 2px var(--parchment),
-        inset 0 0 0 3px #d6c9a8,
-        0 1px 4px rgba(0, 0, 0, 0.4);
+    width: 44px;
+    height: 62px;
+    border-width: 1.5px;
+    box-shadow: 2px 2px 0 rgba(43, 33, 24, 0.3);
+}
+
+.card.small::after {
+    inset: 3px;
 }
 
 .card.small .card-corner {
     top: 3px;
-    left: 4px;
-    font-size: 10px;
+    left: 5px;
+    font-size: 14px;
 }
 
-.card.small .card-corner i {
-    font-size: 9px;
+.card.small .card-corner .suit-glyph {
+    font-size: 8px;
+    margin-top: 1px;
 }
 
 .card.small .card-corner.mirrored {
     top: auto;
     left: auto;
     bottom: 3px;
-    right: 4px;
+    right: 5px;
 }
 
 .card.small .card-center {
-    font-size: 19px;
+    font-size: 20px;
 }
 
 .card.small .card-center.court {
-    font-size: 22px;
+    font-size: 23px;
 }
 
 /* --- suit glyphs -----------------------------------------------------------
-   Every suit mark is an empty <i class="suit-glyph" data-suit> whose
-   character comes from CSS, so .theme-fantasy on the screen root swaps the
-   whole game to weapon emblems (the suits map to weapon classes in
-   Rulebook 2.2) without touching any markup. */
+   Every suit mark in the game is an empty <i class="suit-glyph" data-suit>;
+   the mark itself comes from CSS. Classic mode letters the printer's suits;
+   .theme-fantasy on the screen root swaps in the rulebook's weapon classes
+   (Rulebook 2.2) as inked shapes — mask-image, so they take currentColor and
+   sit on vellum as ink rather than as coloured emoji. Renderers never know. */
 
 .suit-glyph {
     font-style: normal;
@@ -121,149 +134,202 @@
     content: "♣";
 }
 
-.theme-fantasy .suit-glyph[data-suit="hearts"]::before {
-    content: "🔮";
+.theme-fantasy .suit-glyph::before {
+    content: "";
+    display: inline-block;
+    width: 1.15em;
+    height: 1.15em;
+    vertical-align: -0.2em;
+    background-color: currentColor;
+    -webkit-mask: var(--glyph) center / contain no-repeat;
+    mask: var(--glyph) center / contain no-repeat;
 }
 
-.theme-fantasy .suit-glyph[data-suit="diamonds"]::before {
-    content: "🏹";
+/* ♠ sword — stronger up close */
+.theme-fantasy .suit-glyph[data-suit="spades"] {
+    --glyph: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 1.5 14.1 6v9.2H9.9V6Z'/><rect x='5.8' y='15.2' width='12.4' height='1.9'/><rect x='11' y='17.1' width='2' height='3.6'/><circle cx='12' cy='21.4' r='1.7'/></svg>");
 }
 
-.theme-fantasy .suit-glyph[data-suit="spades"]::before {
-    content: "🗡";
+/* ♦ bow — stronger at range */
+.theme-fantasy .suit-glyph[data-suit="diamonds"] {
+    --glyph: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7.5 2.5c6 3.4 6 15.6 0 19' fill='none' stroke='black' stroke-width='1.9'/><line x1='7.5' y1='2.5' x2='7.5' y2='21.5' stroke='black' stroke-width='1'/><line x1='6' y1='12' x2='18.5' y2='12' stroke='black' stroke-width='1.5'/><path d='M18.5 12 15 9.8v4.4Z'/></svg>");
 }
 
-.theme-fantasy .suit-glyph[data-suit="clubs"]::before {
-    content: "💀";
+/* ♥ magic — ignores distance entirely */
+.theme-fantasy .suit-glyph[data-suit="hearts"] {
+    --glyph: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 1.4 13.9 9 21.5 12 13.9 15 12 22.6 10.1 15 2.5 12 10.1 9Z'/></svg>");
 }
 
-/* Emoji carry their own colors and sit a touch large — trim them on cards. */
-.theme-fantasy .card .suit-glyph::before {
-    font-size: 0.88em;
+/* ♣ the manilha deck — crossed blades, the rank that rules the round */
+.theme-fantasy .suit-glyph[data-suit="clubs"] {
+    --glyph: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M3 3.5 15.5 19M21 3.5 8.5 19' stroke='black' stroke-width='1.8' fill='none'/><path d='M13.6 17.4 17.6 21M10.4 17.4 6.4 21' stroke='black' stroke-width='2.6' fill='none'/></svg>");
 }
 
-/* Suit inks on parchment. ♥ magic, ♦ bow, ♠ sword, ♣ manilha pile. */
+/* Suit inks ON VELLUM: iron gall for the sword, vermilion for magic, ochre
+   for the bow — the three inks a rubricator actually had on the desk. */
 .suit-hearts {
-    color: #be3144;
+    color: var(--gules);
 }
 
 .suit-diamonds {
-    color: #b06e14;
+    color: #8c6a22;
 }
 
 .suit-spades {
-    color: #759ac9;
+    color: var(--ink);
 }
 
 .suit-clubs {
-    color: #2e6b3e;
+    color: #3f5b3a;
 }
 
-/* --- backs -------------------------------------------------------------------- */
+/* ...and their counterparts on the OAK. Only the margin column puts suit marks
+   straight onto the table (the log rows, the suit cycle); iron gall would
+   disappear into the wood there. The curtain needs no such override — its
+   panel is vellum, so everything on it keeps the ink above. */
+.game-side .suit-hearts {
+    color: #c87a6b;
+}
+
+.game-side .suit-diamonds {
+    color: #c9a24c;
+}
+
+.game-side .suit-spades {
+    color: #b9a98a;
+}
+
+/* ...but a card in the margin is still a scrap of vellum, so it keeps the ink.
+   The suit class sits ON the card element, hence `.card.suit-*`, not a
+   descendant selector. */
+.game-side .card.suit-hearts {
+    color: var(--gules);
+}
+
+.game-side .card.suit-diamonds {
+    color: #8c6a22;
+}
+
+.game-side .card.suit-spades {
+    color: var(--ink);
+}
+
+/* --- backs ---------------------------------------------------------------- */
 
 .card.card-back {
-    background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.06) 0 6px, transparent 6px 12px), linear-gradient(180deg, #35415c, #232c42);
-    border-color: #1b2233;
+    background: repeating-linear-gradient(45deg, #6e2a22 0 4px, #8a3427 4px 8px);
+    border-color: #4a1c16;
     box-shadow:
-        inset 0 0 0 3px #35415c,
-        inset 0 0 0 4px #4a5878,
-        0 2px 6px rgba(0, 0, 0, 0.4);
-    color: #8fa3cc;
+        inset 0 0 0 3px rgba(233, 221, 193, 0.5),
+        3px 3px 0 rgba(43, 33, 24, 0.35);
+    color: rgba(233, 221, 193, 0.75);
+}
+
+.card.card-back::after {
+    border: 0;
+}
+
+.card.card-back.small {
+    box-shadow:
+        inset 0 0 0 2px rgba(233, 221, 193, 0.5),
+        2px 2px 0 rgba(43, 33, 24, 0.3);
 }
 
 .card-back-emblem {
-    font-size: 22px;
-    opacity: 0.85;
+    font-size: 20px;
+    opacity: 0.5;
 }
 
 .card.small .card-back-emblem {
-    font-size: 15px;
+    font-size: 13px;
 }
 
 .card.pile-empty {
     background: transparent;
-    border: 1px dashed var(--line);
+    border: 1px dashed rgba(43, 33, 24, 0.35);
     box-shadow: none;
 }
 
-/* --- interactive cards (hand) --------------------------------------------------- */
+.card.pile-empty::after {
+    border: 0;
+}
+
+/* --- the hand ------------------------------------------------------------- */
+
+.hand-sheet {
+    width: 100%;
+    max-width: 1240px;
+}
+
+.hand-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.hand-head h3 {
+    font-family: var(--display);
+    font-size: 1.2rem;
+    color: var(--ink);
+}
+
+.hand-head .status-chip {
+    margin-left: auto;
+}
+
+.hand {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
 
 button.card {
     cursor: pointer;
 }
 
 button.card:hover:not(:disabled) {
-    transform: translateY(-6px);
+    transform: translateY(-10px) rotate(-1deg);
+    box-shadow: 5px 8px 0 rgba(43, 33, 24, 0.4);
 }
 
 .card.selected {
-    transform: translateY(-10px);
+    transform: translateY(-14px);
     box-shadow:
-        inset 0 0 0 3px var(--parchment),
-        inset 0 0 0 4px #d6c9a8,
         0 0 0 2px var(--gold),
-        0 6px 16px rgba(0, 0, 0, 0.5);
-}
-
-.hand-zone {
-    width: 100%;
-    max-width: 1060px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 12px 16px 16px;
-}
-
-.hand-meta {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.hand-meta h3 {
-    font-size: 16px;
-    color: var(--ink-light);
-}
-
-.hand {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    justify-content: center;
+        5px 10px 0 rgba(43, 33, 24, 0.4);
 }
 
 .self-pick {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
-    color: var(--muted);
+    font-size: 0.8rem;
+    font-style: italic;
+    color: var(--ink-soft);
 }
 
-/* --- piles & manilha cluster ------------------------------------------------------ */
+/* --- piles ---------------------------------------------------------------- */
 
 .pile-cluster {
     display: flex;
-    gap: 14px;
-    align-items: flex-end;
+    gap: 18px;
+    align-items: flex-start;
 }
 
 .pile {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
+    text-align: center;
 }
 
 .pile.as-button {
     background: none;
-    border: none;
+    border: 0;
     padding: 0;
     cursor: pointer;
 }
@@ -272,73 +338,134 @@ button.card:hover:not(:disabled) {
     transform: translateY(-3px);
 }
 
+.pile.as-button:hover {
+    background: none;
+}
+
 .pile-cards {
     position: relative;
 }
 
-/* Suggest a stack under face-down piles. */
+/* Suggest a stack beneath a face-down pile. */
 .pile-cards .card-back {
     box-shadow:
-        inset 0 0 0 3px #35415c,
-        inset 0 0 0 4px #4a5878,
-        3px 3px 0 -1px #141a29,
-        5px 5px 0 -2px #10151f,
-        0 2px 6px rgba(0, 0, 0, 0.4);
+        inset 0 0 0 2px rgba(233, 221, 193, 0.5),
+        4px 4px 0 -1px #5c221a,
+        6px 6px 0 -2px #45190f,
+        2px 2px 0 rgba(43, 33, 24, 0.3);
 }
 
 .pile-label {
-    font-size: 12px;
-    color: var(--muted);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-soft);
     white-space: nowrap;
 }
 
 .pile-label b {
-    color: var(--ink-light);
+    font-family: var(--display);
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: 0;
 }
+
+/* --- the manilha: a wax seal pressed onto the sheet -------------------------
+   Rulebook 2.7. The ♣ card is drawn face-down and turned over; what it leaves
+   is a ruling — so it resolves into a seal, not a card. */
 
 .manilha-panel {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
 }
 
-.manilha-panel h3 {
-    font-size: 14px;
-    color: var(--gold);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
+/* The slot holds a card's footprint whatever is in it — an empty ring, a
+   face-down card mid-flip, or the pressed seal — so the sheet never jumps
+   when the manilha lands. */
+.manilha-slot,
+.manilha-slot .flip-front {
+    display: grid;
+    place-items: center;
+    width: 88px;
+    height: 126px;
 }
 
-.manilha-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-}
-
-.manilha-slot .card:not(.pile-empty):not(.card-back) {
+.seal {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 96px;
+    height: 96px;
+    /* Wax never sets perfectly round. */
+    border-radius: 47% 53% 52% 48% / 50% 47% 53% 50%;
+    background: radial-gradient(circle at 38% 30%, #b8382a, #8e2418 58%, #6d180f);
     box-shadow:
-        inset 0 0 0 3px var(--parchment),
-        inset 0 0 0 4px #d6c9a8,
-        0 0 0 1px var(--gold),
-        0 0 14px rgba(217, 164, 65, 0.35);
+        inset 0 -6px 14px rgba(0, 0, 0, 0.35),
+        inset 0 4px 10px rgba(255, 255, 255, 0.12),
+        3px 5px 12px rgba(43, 33, 24, 0.45);
+}
+
+.seal::before {
+    content: "";
+    position: absolute;
+    inset: 9px;
+    border: 1.5px solid rgba(233, 221, 193, 0.28);
+    border-radius: inherit;
+}
+
+.seal-rank {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 46px;
+    line-height: 1;
+    color: var(--vellum);
+    text-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* Before the draw there is no wax yet — only the ring where it will land. */
+.seal.empty {
+    background: none;
+    box-shadow: none;
+    border: 2px dashed rgba(43, 33, 24, 0.3);
+}
+
+.seal.empty::before {
+    display: none;
+}
+
+/* A face card or an Ace rules nothing: the wax is grey and the round has no
+   manilha (Rulebook 2.7). */
+.seal.void {
+    background: radial-gradient(circle at 38% 30%, #6a6152, #4e4639 58%, #3a3328);
+}
+
+.seal-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--gules);
 }
 
 .manilha-note {
-    font-size: 12px;
-    color: var(--muted);
+    font-size: 0.9rem;
+    font-style: italic;
+    color: var(--ink-soft);
     text-align: center;
-    max-width: 155px;
+    max-width: 170px;
 }
 
 .manilha-note b {
-    color: var(--gold);
+    font-style: normal;
+    font-weight: 600;
+    color: var(--ink);
 }
 
-/* --- flip machinery ----------------------------------------------------------------
-   flipCardHTML renders back + front; the front faces the viewer in the final
-   state. Adding .animate to an ancestor (.reveal or .manilha-slot — done by
-   the animation executor in main.js) plays the back → front turn. */
+/* --- flip machinery --------------------------------------------------------
+   flipCardHTML renders back + front, with the front facing the viewer in the
+   final state. Adding .animate to an ancestor (.reveal or .manilha-slot — the
+   executor in main.js does it) plays the back → front turn. */
 
 .flip {
     display: inline-block;
@@ -363,6 +490,8 @@ button.card:hover:not(:disabled) {
 .flip-back {
     position: absolute;
     inset: 0;
+    display: grid;
+    place-items: center;
     transform: rotateY(180deg);
 }
 
@@ -380,61 +509,108 @@ button.card:hover:not(:disabled) {
     }
 }
 
-/* --- responsive --------------------------------------------------------------------- */
+/* --- responsive ------------------------------------------------------------ */
 
 @media (max-width: 900px) {
     .card {
-        width: 54px;
-        height: 78px;
+        width: 72px;
+        height: 104px;
     }
 
     .card-center {
-        font-size: 24px;
+        font-size: 32px;
     }
 
     .card-center.court {
-        font-size: 27px;
+        font-size: 36px;
+    }
+
+    .card-corner {
+        font-size: 19px;
+    }
+
+    .manilha-slot,
+    .manilha-slot .flip-front {
+        width: 72px;
+        height: 104px;
+    }
+
+    .seal {
+        width: 80px;
+        height: 80px;
+    }
+
+    .seal-rank {
+        font-size: 38px;
     }
 
     .hand {
-        gap: 8px;
+        gap: 10px;
     }
 }
 
 @media (max-width: 600px) {
     .card {
-        width: 46px;
-        height: 66px;
+        width: 58px;
+        height: 84px;
+    }
+
+    .card::after {
+        inset: 4px;
     }
 
     .card-center {
-        font-size: 20px;
+        font-size: 25px;
     }
 
     .card-center.court {
-        font-size: 22px;
+        font-size: 28px;
     }
 
     .card-corner {
-        top: 3px;
-        left: 4px;
-        font-size: 12px;
+        top: 4px;
+        left: 5px;
+        font-size: 15px;
+    }
+
+    .card-corner.mirrored {
+        bottom: 4px;
+        right: 5px;
+    }
+
+    .card.small {
+        width: 38px;
+        height: 54px;
+    }
+
+    .card.small .card-center {
+        font-size: 17px;
     }
 
     .hand {
-        gap: 6px;
+        gap: 8px;
     }
 
-    .hand-zone {
-        padding: 10px 8px 12px;
+    .manilha-slot,
+    .manilha-slot .flip-front {
+        width: 58px;
+        height: 84px;
     }
 
-    /* Tighten the opponent's fanned backs so a 4-card hand never overflows. */
-    .opponent-hand .card {
-        margin-left: -22px;
+    .seal {
+        width: 68px;
+        height: 68px;
+    }
+
+    .seal::before {
+        inset: 6px;
+    }
+
+    .seal-rank {
+        font-size: 32px;
     }
 
     .pile-cluster {
-        gap: 8px;
+        gap: 10px;
     }
 }

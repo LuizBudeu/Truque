@@ -42,7 +42,7 @@ export const messages = {
         "menu.createHint": "You'll get a short code to share with your opponent.",
         "menu.or": "or",
         "menu.roomCodePlaceholder": "Room code",
-        "menu.joinRoom": "Join room",
+        "menu.joinRoom": "Join",
         "menu.newHotseat": "New hotseat game",
         "menu.hotseatHint": "Two players, one device — debugging mode.",
         "lobby.roomCode": "Room code",
@@ -74,14 +74,13 @@ export const messages = {
         "side.roundLog": "Round history",
 
         // --- round-history log ---
-        "log.round": ({ n }) => `R${n}`,
         "log.tie": "Tie",
         "log.youWon": "You won",
         "log.wonBy": ({ label }) => `${label} won`,
 
         // --- swap window ---
         "swap.closed": "Swap window closed — waiting for your opponent…",
-        "swap.instructions": ({ seat, remaining }) => `${seat}: select cards to swap (${remaining} left this game) or keep your hand. Swapped cards are revealed to the graveyard.`,
+        "swap.instructions": ({ seat, remaining }) => `${seat}: select cards to swap, or keep the hand you hold.`,
         "swap.selected": ({ n }) => `Swap selected (${n})`,
         "swap.done": "Done — keep hand",
 
@@ -174,7 +173,6 @@ export const messages = {
         "manilha.beforeReveal": "Revealed after the swap window",
         "manilha.faceCard": "Face card — no manilha this round",
         "manilha.everyRank": ({ rank }) => `Every <b>${rank}</b> is worth 14`,
-        "manilha.pile": "pile",
 
         // --- graveyard modal ---
         "grave.title": ({ n }) => `Graveyard (${n})`,
@@ -247,7 +245,7 @@ export const messages = {
         "menu.createHint": "Você receberá um código curto para compartilhar com seu oponente.",
         "menu.or": "ou",
         "menu.roomCodePlaceholder": "Código da sala",
-        "menu.joinRoom": "Entrar na sala",
+        "menu.joinRoom": "Entrar",
         "menu.newHotseat": "Novo jogo local",
         "menu.hotseatHint": "Dois jogadores, um dispositivo — modo de depuração.",
         "lobby.roomCode": "Código da sala",
@@ -279,15 +277,13 @@ export const messages = {
         "side.roundLog": "Histórico de rodadas",
 
         // --- round-history log ---
-        "log.round": ({ n }) => `R${n}`,
         "log.tie": "Empate",
         "log.youWon": "Você venceu",
         "log.wonBy": ({ label }) => `${label} venceu`,
 
         // --- swap window ---
         "swap.closed": "Janela de troca fechada — aguardando seu oponente…",
-        "swap.instructions": ({ seat, remaining }) =>
-            `${seat}: selecione cartas para trocar (${remaining} restantes neste jogo) ou mantenha sua mão. As cartas trocadas vão reveladas para o cemitério.`,
+        "swap.instructions": ({ seat, remaining }) => `${seat}: selecione cartas para trocar ou mantenha sua mão.`,
         "swap.selected": ({ n }) => `Trocar selecionadas (${n})`,
         "swap.done": "Pronto — manter a mão",
 
@@ -379,7 +375,6 @@ export const messages = {
         "manilha.beforeReveal": "Revelada após a janela de troca",
         "manilha.faceCard": "Figura — sem manilha nesta rodada",
         "manilha.everyRank": ({ rank }) => `Todo <b>${rank}</b> vale 14`,
-        "manilha.pile": "pilha",
 
         // --- graveyard modal ---
         "grave.title": ({ n }) => `Cemitério (${n})`,
