@@ -40,12 +40,16 @@ export const messages = {
         "menu.tagline": "Push your opponent off the board.",
         "menu.createRoom": "Create room",
         "menu.createHint": "You'll get a short code to share with your opponent.",
+        "menu.rulesetLabel": "Ruleset",
+        "menu.legacyHint": "The original rules.",
+        "menu.v2Hint": "V2: magic answers the opponent's suit, and the board shrinks each reshuffle.",
         "menu.or": "or",
         "menu.roomCodePlaceholder": "Room code",
         "menu.joinRoom": "Join",
         "menu.newHotseat": "New hotseat game",
         "menu.hotseatHint": "Two players, one device — debugging mode.",
         "lobby.roomCode": "Room code",
+        "lobby.rulesetLabel": "Ruleset",
         "lobby.shareHint": "Share this code — the game starts when your opponent joins.",
         "lobby.copyLink": "Copy invite link",
         "lobby.linkCopied": "Link copied!",
@@ -158,6 +162,10 @@ export const messages = {
         "buff.sword": "Sword",
         "buff.bow": "Bow",
         "buff.magic": "Magic",
+        "ruleset.v2Badge": "V2",
+        "ruleset.v2Title": "V2 rules: magic answers the opponent's suit, and the board shrinks each reshuffle",
+        "ruleset.legacyName": "Legacy",
+        "ruleset.v2Name": "V2",
 
         // --- opponent row & hand ---
         "chip.swapsLeft": ({ n }) => `Swaps left ${n}`,
@@ -248,6 +256,24 @@ export const messages = {
                 p: ["While you stand on your first space, your opponent must reveal their card before you pick yours. If you tie while on your danger space, you lose."],
             },
         ],
+        "rules.v2Sections": [
+            {
+                variant: true,
+                h: "V2 · Magic answers the suit",
+                p: [
+                    "In V2, ♥ <b>Magic</b> is no longer neutral. It takes the opponent card's own distance modifier: <b>+</b> that amount against a ♦ bow (magic beats the bow) and <b>−</b> that amount against a ♠ sword (the sword beats magic). Against another ♥ it is 0.",
+                    "So magic is still even mid-board, but at the extremes it swings hard — a well-timed ♥ can beat a higher card of the suit it counters.",
+                ],
+            },
+            {
+                variant: true,
+                h: "V2 · The board shrinks",
+                p: [
+                    "Each time the play deck runs out and is reshuffled, both ends of the board fall away by one space. A pawn caught on a removed space slides inward — never an instant loss.",
+                    "Long games tighten toward a decisive finish, and there is less room to retreat into.",
+                ],
+            },
+        ],
     },
 
     pt: {
@@ -255,12 +281,16 @@ export const messages = {
         "menu.tagline": "Empurre seu oponente para fora do tabuleiro.",
         "menu.createRoom": "Criar sala",
         "menu.createHint": "Você receberá um código curto para compartilhar com seu oponente.",
+        "menu.rulesetLabel": "Regras",
+        "menu.legacyHint": "As regras originais.",
+        "menu.v2Hint": "V2: a magia responde ao naipe do oponente, e o tabuleiro encolhe a cada rebaralho.",
         "menu.or": "ou",
         "menu.roomCodePlaceholder": "Código da sala",
         "menu.joinRoom": "Entrar",
         "menu.newHotseat": "Novo jogo local",
         "menu.hotseatHint": "Dois jogadores, um dispositivo — modo de depuração.",
         "lobby.roomCode": "Código da sala",
+        "lobby.rulesetLabel": "Regras",
         "lobby.shareHint": "Compartilhe este código — o jogo começa quando seu oponente entrar.",
         "lobby.copyLink": "Copiar link de convite",
         "lobby.linkCopied": "Link copiado!",
@@ -372,6 +402,10 @@ export const messages = {
         "buff.sword": "Espada",
         "buff.bow": "Arco",
         "buff.magic": "Magia",
+        "ruleset.v2Badge": "V2",
+        "ruleset.v2Title": "Regras V2: a magia responde ao naipe do oponente, e o tabuleiro encolhe a cada rebaralho",
+        "ruleset.legacyName": "Original",
+        "ruleset.v2Name": "V2",
 
         // --- opponent row & hand ---
         "chip.swapsLeft": ({ n }) => `Trocas restantes ${n}`,
@@ -466,6 +500,24 @@ export const messages = {
             {
                 h: "Zona de perigo",
                 p: ["Enquanto você estiver na sua primeira casa, seu oponente precisa revelar a carta dele antes de você escolher a sua. Se você empatar estando na sua zona de perigo, você perde."],
+            },
+        ],
+        "rules.v2Sections": [
+            {
+                variant: true,
+                h: "V2 · A magia responde ao naipe",
+                p: [
+                    "No V2, ♥ <b>Magia</b> deixa de ser neutra. Ela assume o modificador de distância da carta do oponente: <b>+</b> esse valor contra um arco ♦ (a magia vence o arco) e <b>−</b> esse valor contra uma espada ♠ (a espada vence a magia). Contra outra ♥, é 0.",
+                    "Então a magia continua equilibrada no meio do tabuleiro, mas nos extremos ela oscila forte — uma ♥ na hora certa vence uma carta maior do naipe que ela neutraliza.",
+                ],
+            },
+            {
+                variant: true,
+                h: "V2 · O tabuleiro encolhe",
+                p: [
+                    "Toda vez que o baralho de jogo acaba e é rebaralhado, as duas pontas do tabuleiro recuam uma casa. Um peão preso numa casa removida desliza para dentro — nunca é eliminação imediata.",
+                    "Partidas longas se apertam rumo a um fim decisivo, e sobra menos espaço para recuar.",
+                ],
             },
         ],
     },

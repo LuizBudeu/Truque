@@ -14,6 +14,9 @@
  *     choreographed by CSS delays under a single `.animate` class.
  * - { type: 'pawn-slide', moves: [{ player, from, to }], duration }
  *     One step per transition; simultaneous moves (tie retreat) share it.
+ * - { type: 'board-shrink', from, to, duration }
+ *     V2 only: the board bounds narrowed on a reshuffle; the removed edge spaces
+ *     collapse away. `from`/`to` are the { min, max } extents.
  * - { type: 'manilha-flip', duration }
  *     The new round's manilha card flips over.
  */
@@ -23,6 +26,7 @@
 export const DURATIONS = {
   reveal: 1200,
   pawnSlide: 520,
+  boardShrink: 560,
   manilhaFlip: 600,
 };
 
@@ -65,6 +69,17 @@ export function buildAnimationPlan(prev, next) {
   }
   if (moves.length > 0) {
     steps.push({ type: 'pawn-slide', moves, duration: DURATIONS.pawnSlide });
+  }
+
+  // Board shrink (V2): the bounds narrowed on a reshuffle. After the pawns settle,
+  // the removed edge spaces collapse away.
+  if (prev.bounds && next.bounds && (prev.bounds.min !== next.bounds.min || prev.bounds.max !== next.bounds.max)) {
+    steps.push({
+      type: 'board-shrink',
+      from: { ...prev.bounds },
+      to: { ...next.bounds },
+      duration: DURATIONS.boardShrink,
+    });
   }
 
   // A new manilha was drawn (null during SWAP_WINDOW, a card from DRAW_MANILHA

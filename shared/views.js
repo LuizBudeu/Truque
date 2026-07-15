@@ -11,7 +11,7 @@
  * @typedef {import('./cards.js').Card} Card
  */
 
-import { DANGER_SPACES } from './rules.js';
+import { dangerSpaces } from './rules.js';
 
 /**
  * What one player is allowed to see:
@@ -25,6 +25,8 @@ import { DANGER_SPACES } from './rules.js';
  * @typedef {Object} PlayerView
  * @property {0|1} playerIndex - whose view this is
  * @property {string} phase
+ * @property {string} ruleset - ruleset id in force for this match (public)
+ * @property {{ min: number, max: number }} bounds - live board extent (public; V2 shrinks it)
  * @property {number} round
  * @property {number|null} manilha
  * @property {Card|null} manilhaCard
@@ -55,7 +57,8 @@ import { DANGER_SPACES } from './rules.js';
  */
 export function getPlayerView(state, playerIndex) {
   const opponent = 1 - playerIndex;
-  const endangered = [0, 1].map((p) => state.positions[p] === DANGER_SPACES[p]);
+  const danger = dangerSpaces(state.bounds);
+  const endangered = [0, 1].map((p) => state.positions[p] === danger[p]);
   // Rulebook 2.9: open play only when exactly ONE player is endangered; the
   // revealed card belongs to the non-endangered player and only the
   // endangered player gets to see it early.
@@ -69,6 +72,8 @@ export function getPlayerView(state, playerIndex) {
   return {
     playerIndex,
     phase: state.phase,
+    ruleset: state.ruleset,
+    bounds: { ...state.bounds },
     round: state.round,
     manilha: state.manilha,
     manilhaCard: state.manilhaCard ? { ...state.manilhaCard } : null,

@@ -109,7 +109,7 @@ function handleMessage(rooms, createSeed, socket, ctx, msg) {
     case 'CREATE_ROOM': {
       if (ctx.room) return reject('already in a room');
       const code = generateRoomCode((c) => rooms.has(c));
-      const room = new Room(code, createSeed());
+      const room = new Room(code, createSeed(), msg.ruleset);
       rooms.set(code, room);
       const { playerIndex, playerToken } = room.join(socket);
       ctx.room = room;

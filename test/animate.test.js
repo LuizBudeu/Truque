@@ -133,3 +133,37 @@ describe('manilha flip', () => {
     assert.deepEqual(buildAnimationPlan(view(s, 0), view(s1, 0)), []);
   });
 });
+
+describe('board shrink (V2)', () => {
+  test('narrowed bounds emit a board-shrink step carrying the extents', () => {
+    const before = view(makeState({ ruleset: 'v2', bounds: { min: 0, max: 11 }, positions: [4, 7] }));
+    const after = view(makeState({ ruleset: 'v2', bounds: { min: 1, max: 10 }, positions: [4, 7] }));
+    const plan = buildAnimationPlan(before, after);
+    assert.deepEqual(types(plan), ['board-shrink']);
+    assert.deepEqual(plan[0].from, { min: 0, max: 11 });
+    assert.deepEqual(plan[0].to, { min: 1, max: 10 });
+  });
+
+  test('a real reshuffle round slides the winner, then collapses the edges', () => {
+    // One card left in the deck forces a reshuffle when the hands refill.
+    let s0 = makeState({
+      ruleset: 'v2',
+      playDeck: [C(4, 'spades')],
+      graveyard: [C(6, 'spades'), C(6, 'diamonds'), C(8, 'spades'), C(8, 'hearts')],
+    });
+    s0 = applyAction(s0, { type: 'PLAY_CARD', player: 0, card: C(9, 'diamonds') });
+    s0 = applyAction(s0, { type: 'PLAY_CARD', player: 1, card: C(3, 'hearts') });
+    const s1 = applyAction(s0, { type: 'CHOOSE_MOVE', player: 0, selfOffset: 1 });
+    assert.deepEqual(s1.bounds, { min: 1, max: 10 });
+
+    const plan = buildAnimationPlan(view(s0, 0), view(s1, 0));
+    assert.deepEqual(types(plan), ['pawn-slide', 'board-shrink']);
+    assert.deepEqual(plan[1].to, { min: 1, max: 10 });
+  });
+
+  test('Legacy never emits a board-shrink step', () => {
+    const before = view(makeState({ positions: [4, 7] }));
+    const after = view(makeState({ positions: [3, 7] }));
+    assert.ok(!types(buildAnimationPlan(before, after)).includes('board-shrink'));
+  });
+});

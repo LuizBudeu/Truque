@@ -27,6 +27,7 @@ export function hudHTML(view, { t, lang = "en", concede = false, concedeArmed = 
     <header class="hud">
       <div class="hud-left">
         <span class="brand">Truqué</span>
+        ${view.ruleset === "v2" ? `<span class="ruleset-badge" title="${t("ruleset.v2Title")}">${t("ruleset.v2Badge")}</span>` : ""}
         <span class="hud-stat">${t("hud.round", { n: view.round })}</span>
         <span class="hud-phase">${t("phase." + view.phase)}</span>
       </div>

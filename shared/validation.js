@@ -13,9 +13,8 @@ import { cardEquals } from './cards.js';
 import {
   retreatTarget,
   clampToDanger,
-  DANGER_SPACES,
+  dangerSpaces,
   ADVANCE_DIR,
-  BOARD_SIZE,
 } from './rules.js';
 
 const LEGAL = { legal: true };
@@ -91,7 +90,7 @@ function checkPlayCard(state, { player, card }) {
   if (!isCard(card)) return illegal('malformed card');
   if (!state.hands[player].some((c) => cardEquals(c, card))) return illegal('card not in hand');
 
-  const endangered = [0, 1].map((p) => state.positions[p] === DANGER_SPACES[p]);
+  const endangered = [0, 1].map((p) => state.positions[p] === dangerSpaces(state.bounds)[p]);
   if (endangered[0] !== endangered[1]) {
     const openPlayer = endangered[0] ? 1 : 0;
     if (player !== openPlayer && !state.pendingPicks[openPlayer]) {
@@ -117,23 +116,24 @@ function checkChooseMove(state, { player, selfOffset, pushAmount }) {
   }
 
   const loser = 1 - player;
+  const danger = dangerSpaces(state.bounds);
   let loserPos = state.positions[loser];
   let loserEliminated = false;
   if (resolution.loserEffect.type === 'K_PUSH') {
     if (!Number.isInteger(pushAmount) || pushAmount < 0 || pushAmount > resolution.loserEffect.maxPush) {
       return illegal(`pushAmount must be an integer 0–${resolution.loserEffect.maxPush}`);
     }
-    if (pushAmount > 0 && loserPos === DANGER_SPACES[loser]) {
+    if (pushAmount > 0 && loserPos === danger[loser]) {
       loserEliminated = true; // Rulebook 2.8: already on the last space (§10 Q14)
     } else {
-      loserPos = clampToDanger(loser, retreatTarget(loser, loserPos, pushAmount));
+      loserPos = clampToDanger(loser, retreatTarget(loser, loserPos, pushAmount), state.bounds);
     }
   } else if (pushAmount !== undefined && pushAmount !== 0) {
     return illegal('pushAmount only applies when the winner played K');
   }
 
   const target = state.positions[player] + ADVANCE_DIR[player] * selfOffset;
-  if (target < 0 || target >= BOARD_SIZE) return illegal('move leaves the board');
+  if (target < state.bounds.min || target > state.bounds.max) return illegal('move leaves the board');
   if (!loserEliminated) {
     const passes = player === 0 ? target >= loserPos : target <= loserPos;
     if (passes) return illegal('cannot pass or share a space with the opponent');

@@ -11,6 +11,7 @@
 
 import { randomUUID, randomInt } from 'node:crypto';
 import { createInitialState, applyAction } from '../shared/reducer.js';
+import { getRuleset } from '../shared/rulesets/index.js';
 import { isLegalAction } from '../shared/validation.js';
 import { getPlayerView } from '../shared/views.js';
 
@@ -37,10 +38,14 @@ export class Room {
   /**
    * @param {string} code - join code
    * @param {number} seed - RNG seed for this room's game (server-chosen)
+   * @param {string} [ruleset] - ruleset id; normalized (unknown → Legacy) and fixed for the match
    */
-  constructor(code, seed) {
+  constructor(code, seed, ruleset) {
     this.code = code;
     this.seed = seed;
+    // Normalize once so the room can only ever hold a valid id; the creator's
+    // choice is fixed here and reused for the initial game and every rematch.
+    this.ruleset = getRuleset(ruleset).id;
     /** @type {{token: string, socket: ?{send: Function}, connected: boolean}[]} */
     this.players = [];
     /** @type {?import('../shared/reducer.js').GameState} */
@@ -66,7 +71,9 @@ export class Room {
     const playerToken = randomUUID();
     this.players.push({ token: playerToken, socket, connected: true });
     this.emptySince = null;
-    if (this.players.length === 2) this.state = createInitialState(this.seed);
+    if (this.players.length === 2) {
+      this.state = createInitialState(this.seed, { ruleset: this.ruleset });
+    }
     return { playerIndex: this.players.length - 1, playerToken };
   }
 
@@ -131,7 +138,7 @@ export class Room {
     }
     this.rematchVotes = this.rematchVotes.map((v, i) => (i === playerIndex ? true : v));
     if (this.rematchVotes[0] && this.rematchVotes[1]) {
-      this.state = createInitialState(seed);
+      this.state = createInitialState(seed, { ruleset: this.ruleset });
       this.rematchVotes = [false, false];
       return { ok: true, started: true };
     }
@@ -160,6 +167,7 @@ export class Room {
       type: 'ROOM_STATE',
       players: this.players.map((p) => ({ connected: p.connected })),
       status: this.status,
+      ruleset: this.ruleset, // so the lobby can show a joiner which rules they're entering
     };
     for (let p = 0; p < this.players.length; p++) this.sendTo(p, message);
   }

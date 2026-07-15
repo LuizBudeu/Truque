@@ -530,3 +530,81 @@ describe('phase 4 visuals', () => {
     assert.ok(renderApp(onlineModel(s, 1)).includes('You retreat 1'));
   });
 });
+
+describe('V2 ruleset surfaces', () => {
+  test('the HUD flags a V2 match with a badge; Legacy shows none', () => {
+    assert.ok(renderApp(onlineModel(makeState({ ruleset: 'v2' }), 0)).includes('ruleset-badge'));
+    assert.ok(!renderApp(onlineModel(makeState(), 0)).includes('ruleset-badge'));
+  });
+
+  test('the magic medallion is dynamic under V2, flat under Legacy', () => {
+    // distance 3 → ♦ +1 / ♠ −1, so magic reads +1 vs bow, −1 vs sword.
+    const v2 = renderApp(onlineModel(makeState({ ruleset: 'v2', positions: [3, 7] }), 0));
+    assert.ok(v2.includes('suit-hearts dynamic'));
+    assert.ok(v2.includes('vs-pair'));
+    // +1 vs bow is inked blue (buffed), −1 vs sword red (nerfed).
+    assert.ok(/<span class="n buffed">\+1<\/span>/.test(v2));
+    assert.ok(/<span class="n nerfed">-1<\/span>/.test(v2));
+
+    const legacy = renderApp(onlineModel(makeState({ positions: [3, 7] }), 0));
+    assert.ok(!legacy.includes('dynamic'));
+    assert.ok(/suit-hearts neutral[^>]*>.*<span class="val">0<\/span>/.test(legacy));
+  });
+
+  test('the reveal reads back the applied magic modifier from the engine', () => {
+    // ♥5 vs ♦5 at distance 3 under V2: magic +1 → effective 6.
+    const s = makeState({
+      ruleset: 'v2',
+      phase: 'WINNER_MOVE',
+      positions: [3, 7],
+      lastResolution: {
+        winner: 0,
+        cards: [C(5, 'hearts'), C(5, 'diamonds')],
+        effectiveValues: [6, 6],
+        manilha: null,
+        usedSuitCycle: true,
+        inverted: false,
+        buffsRemoved: false,
+        loserEffect: { type: 'RETREAT', amount: 1 },
+        winnerMoveRange: 2,
+        distance: 3,
+      },
+    });
+    const html = renderApp(buildModel(s, 0, ui()));
+    assert.ok(html.includes('+1 dist')); // the magic modifier, not a flat 0
+    assert.ok(html.includes('<b>= 6</b>'));
+  });
+
+  test('the rulebook gains the V2 variant sections only under V2', () => {
+    const v2 = renderApp(onlineModel(makeState({ ruleset: 'v2' }), 0, { rulesOpen: true }));
+    assert.ok(v2.includes('rules-section variant'));
+    assert.ok(v2.includes('Magic answers the suit'));
+    assert.ok(v2.includes('The board shrinks'));
+
+    const legacy = renderApp(onlineModel(makeState(), 0, { rulesOpen: true }));
+    assert.ok(!legacy.includes('variant'));
+    assert.ok(!legacy.includes('The board shrinks'));
+  });
+
+  test('a shrunk board renders only its remaining spaces', () => {
+    const html = renderApp(onlineModel(makeState({ ruleset: 'v2', bounds: { min: 2, max: 9 }, positions: [4, 7] }), 0));
+    const spaces = html.match(/class="space[ "]/g) ?? [];
+    assert.equal(spaces.length, 8); // max - min + 1
+  });
+
+  test('the menu ruleset toggle marks the current choice and previews its rules', () => {
+    const v2 = renderApp({ screen: 'menu', ruleset: 'v2' });
+    assert.ok(/ruleset-opt active[^>]*data-ruleset="v2"/.test(v2));
+    assert.ok(v2.includes('the board shrinks each reshuffle'));
+
+    const legacy = renderApp({ screen: 'menu', ruleset: 'legacy' });
+    assert.ok(/ruleset-opt active[^>]*data-ruleset="legacy"/.test(legacy));
+    assert.ok(legacy.includes('The original rules.'));
+  });
+
+  test('the lobby shows the room ruleset so a joiner sees what they entered', () => {
+    const html = renderApp({ screen: 'lobby', roomCode: 'ABCD', connection: 'open', ruleset: 'v2' });
+    assert.ok(html.includes('lobby-ruleset'));
+    assert.ok(/Ruleset:\s*<b>V2<\/b>/.test(html));
+  });
+});

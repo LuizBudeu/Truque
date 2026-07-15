@@ -24,10 +24,11 @@ import {
   retreatTarget,
   isBeyondDanger,
   clampToDanger,
-  DANGER_SPACES,
+  dangerSpaces,
   ADVANCE_DIR,
   START_POSITIONS,
 } from './rules.js';
+import { getRuleset } from './rulesets/index.js';
 import { isLegalAction } from './validation.js';
 
 /** Observable resting phases (see module comment). */
@@ -49,6 +50,9 @@ export const SWAP_BUDGET = 4;
  *
  * @typedef {Object} GameState
  * @property {'SWAP_WINDOW'|'PICK_CARDS'|'WINNER_MOVE'|'GAME_OVER'} phase
+ * @property {string} ruleset - ruleset id ('legacy' | 'v2'); resolves to a policy object via getRuleset
+ * @property {{ min: number, max: number }} bounds - live board extent; Legacy is fixed at {0,11}, V2 shrinks it
+ * @property {boolean} pendingReshuffle - a play-deck reshuffle happened this round; the ruleset reacts at the round boundary
  * @property {number} round - 1-based round counter
  * @property {number|null} manilha - manilha rank 2–10, or null (face card / A drawn, or not yet drawn)
  * @property {Card|null} manilhaCard - the drawn ♣ card, for display
@@ -94,12 +98,17 @@ export const SWAP_BUDGET = 4;
  * swap window open.
  *
  * @param {number} seed - RNG seed chosen by the server (or test)
+ * @param {{ ruleset?: string }} [options] - ruleset id (absent → Legacy)
  * @returns {GameState}
  */
-export function createInitialState(seed) {
+export function createInitialState(seed, { ruleset = 'legacy' } = {}) {
   const { cards: deck, rngState } = shuffled(buildPlayDeck(), seed >>> 0);
+  const rules = getRuleset(ruleset);
   return {
     phase: 'SWAP_WINDOW',
+    ruleset: rules.id,
+    bounds: { ...rules.initialBounds },
+    pendingReshuffle: false,
     round: 1,
     manilha: null,
     manilhaCard: null,
@@ -169,6 +178,9 @@ function applySwapCards(state, { player, cards }) {
     playDeck: afterDraw.playDeck,
     graveyard: afterDraw.graveyard,
     rngState: afterDraw.rngState,
+    // A reshuffle during the swap window counts toward this round; the ruleset
+    // reacts once, at the round boundary (finishRound).
+    pendingReshuffle: state.pendingReshuffle || afterDraw.reshuffled,
     swapsRemaining,
     // Budget exhausted → nothing left to do in the window.
     swapDone: swapsRemaining[player] === 0 ? setIndex(state.swapDone, player, true) : state.swapDone,
@@ -201,15 +213,16 @@ function applyConcede(state, { player }) {
 function applyChooseMove(state, { player, selfOffset, pushAmount }) {
   const winner = player;
   const loser = 1 - winner;
+  const danger = dangerSpaces(state.bounds);
   let next = state;
 
   if (state.lastResolution.loserEffect.type === 'K_PUSH') {
     // Rulebook 2.8: push up to 3, capped at the loser's first space — unless
     // they already stand there, where any push shoves them off (§10 Q14).
-    if (pushAmount > 0 && state.positions[loser] === DANGER_SPACES[loser]) {
+    if (pushAmount > 0 && state.positions[loser] === danger[loser]) {
       return gameOver(state, winner);
     }
-    const pushed = clampToDanger(loser, retreatTarget(loser, state.positions[loser], pushAmount));
+    const pushed = clampToDanger(loser, retreatTarget(loser, state.positions[loser], pushAmount), state.bounds);
     next = { ...state, positions: setIndex(state.positions, loser, pushed) };
   }
 
@@ -224,7 +237,13 @@ function applyChooseMove(state, { player, selfOffset, pushAmount }) {
 /** Both picks are in: reveal, resolve combat, apply the loser's forced movement. */
 function resolveRound(state) {
   const distance = distanceBetween(state.positions);
-  const resolution = resolveCombat([...state.pendingPicks], state.manilha, distance);
+  const danger = dangerSpaces(state.bounds);
+  const resolution = resolveCombat(
+    [...state.pendingPicks],
+    state.manilha,
+    distance,
+    getRuleset(state.ruleset).suitModifier,
+  );
   const entry = { ...resolution, distance, round: state.round };
   let next = {
     ...state,
@@ -237,7 +256,7 @@ function resolveRound(state) {
   if (resolution.winner === 'tie') {
     // Rulebook 2.4: both retreat 1. On the danger space that means elimination
     // (§10 Q4); both eliminated is a draw (§10 Q9).
-    const out = [0, 1].map((p) => next.positions[p] === DANGER_SPACES[p]);
+    const out = [0, 1].map((p) => next.positions[p] === danger[p]);
     if (out[0] && out[1]) return gameOver(next, 'draw');
     if (out[0]) return gameOver(next, 1);
     if (out[1]) return gameOver(next, 0);
@@ -250,10 +269,10 @@ function resolveRound(state) {
   const effect = resolution.loserEffect;
   if (effect.type === 'RETREAT') {
     const target = retreatTarget(loser, next.positions[loser], effect.amount);
-    if (isBeyondDanger(loser, target)) {
+    if (isBeyondDanger(loser, target, next.bounds)) {
       // Rulebook 2.12: pushed beyond the danger space — out of the field.
       return gameOver(
-        { ...next, positions: setIndex(next.positions, loser, DANGER_SPACES[loser]) },
+        { ...next, positions: setIndex(next.positions, loser, danger[loser]) },
         winner,
       );
     }
@@ -263,10 +282,10 @@ function resolveRound(state) {
     // already standing on their danger space loses for losing there at all
     // (Rulebook 2.9/2.12; §10 Q4 generalized to any loss); that overrides the
     // K's return-to-first mitigation.
-    if (next.positions[loser] === DANGER_SPACES[loser]) {
+    if (next.positions[loser] === danger[loser]) {
       return gameOver(next, winner);
     }
-    next = { ...next, positions: setIndex(next.positions, loser, DANGER_SPACES[loser]) };
+    next = { ...next, positions: setIndex(next.positions, loser, danger[loser]) };
   }
   // K_PUSH is the winner's choice — applied in CHOOSE_MOVE. The winner always
   // takes their own move after the loser's forced movement (§10 Q13).
@@ -277,23 +296,32 @@ function resolveRound(state) {
 function finishRound(state) {
   let { playDeck, graveyard, rngState } = state;
   let hands = state.hands;
+  let reshuffled = state.pendingReshuffle;
   for (const p of [0, 1]) {
     const result = draw(playDeck, graveyard, HAND_SIZE - hands[p].length, rngState);
     ({ playDeck, graveyard, rngState } = result);
+    reshuffled = reshuffled || result.reshuffled;
     hands = setIndex(hands, p, [...hands[p], ...result.drawn]);
   }
-  return maybeCloseSwapWindow({
-    ...state,
-    phase: 'SWAP_WINDOW',
-    round: state.round + 1,
-    manilha: null, // the manilha card returns to its pile (Rulebook 2.7)
-    manilhaCard: null,
-    hands,
-    playDeck,
-    graveyard,
-    rngState,
-    swapDone: [state.swapsRemaining[0] === 0, state.swapsRemaining[1] === 0],
-  });
+  // Ruleset seam: react to a play-deck reshuffle at the round boundary (V2 shrinks
+  // the board here; Legacy is identity). Flag consumed → cleared.
+  const nextRound = getRuleset(state.ruleset).onReshuffle(
+    {
+      ...state,
+      phase: 'SWAP_WINDOW',
+      round: state.round + 1,
+      manilha: null, // the manilha card returns to its pile (Rulebook 2.7)
+      manilhaCard: null,
+      hands,
+      playDeck,
+      graveyard,
+      rngState,
+      pendingReshuffle: false,
+      swapDone: [state.swapsRemaining[0] === 0, state.swapsRemaining[1] === 0],
+    },
+    reshuffled,
+  );
+  return maybeCloseSwapWindow(nextRound);
 }
 
 /**
@@ -342,6 +370,7 @@ function shuffled(cards, rngState) {
  */
 function draw(playDeck, graveyard, count, rngState) {
   const drawn = [];
+  let reshuffled = false;
   for (let i = 0; i < count; i++) {
     if (playDeck.length === 0) {
       /* c8 ignore next 3 -- card conservation makes a double-empty impossible */
@@ -350,9 +379,10 @@ function draw(playDeck, graveyard, count, rngState) {
       }
       ({ cards: playDeck, rngState } = shuffled(graveyard, rngState));
       graveyard = [];
+      reshuffled = true; // graveyard folded back in — a ruleset may react (V2 shrink)
     }
     drawn.push(playDeck[0]);
     playDeck = playDeck.slice(1);
   }
-  return { playDeck, graveyard, drawn, rngState };
+  return { playDeck, graveyard, drawn, rngState, reshuffled };
 }

@@ -271,6 +271,69 @@ play on) — six inks, and no rounded glowing panels anywhere.
 **Done when:** every screen reads as one artefact, and nothing in the diff
 touched `/shared`, the reducer, or the protocol.
 
+### Phase 7 — Ruleset variants (Legacy vs V2)
+
+The finalized rules ("Legacy") stay frozen; a second ruleset ("V2") introduces
+two mechanics playtesting suggested. A room's ruleset is chosen by the creator at
+create time and is fixed for the match.
+
+**The two V2 rules:**
+
+1. **Board shrink on reshuffle.** Every time the play deck empties and the
+   graveyard is reshuffled in, both board edges retract by one space. A pawn
+   standing on a removed space slides inward (never an instant loss). Compresses
+   long games without punishing short ones; pressures the trailing player, so it
+   accelerates a decisive ending rather than injecting randomness.
+2. **Scaled-triangle magic.** ♥ stops being a flat 0. Its modifier magnitude =
+   the opponent suit's current distance-modifier magnitude; its sign follows the
+   existing suit cycle (♥ beats ♦ → `+`, loses to ♠ → `−`, vs ♥ → 0). Neutral at
+   mid-board (all modifiers 0), a real value swing at the extremes. (The reshuffle
+   modifier-doubling idea was considered and cut — the shrink already changes the
+   game up, and doubling stacked a second experimental variable on one trigger.)
+
+**Architecture — ruleset as authoritative state, seams not flags.** The reducer
+is pure and runs identically on server and client, so the ruleset must travel
+inside the state: `state.ruleset` holds an id (`'legacy' | 'v2'`, absent →
+legacy). The config lives in code (`shared/rulesets/`), never on state. A ruleset
+is a **policy object of pure functions + data**, not a bag of booleans — the
+engine calls its seams, so there are zero `ruleset === 'v2'` branches in the
+engine. `legacy` is the base (today's game, stated explicitly); `v2` spreads it
+and overrides only the deltas, delegating the shared parts back to legacy. Add
+seams lazily — one per rule that actually needs one.
+
+- **Seams so far:** `suitModifier(card, opponentCard, distance)` (data: the modifier
+  table; V2 overrides ♥), `onReshuffle(state, reshuffled)` (V2 shrinks; legacy is
+  identity). Plus `initialBounds` as plain data.
+- Because the board shrinks, `BOARD_SIZE`/`DANGER_SPACES` become **derived from
+  `state.bounds`** (`{ min, max }`), not constants. Legacy simply never mutates
+  bounds. `dangerSpaces(bounds)` / `boardSize(bounds)` helpers replace the
+  constants at every dynamic call site.
+
+**Sub-phases (each verifiable before the next):**
+
+- **7.1 Engine foundation (no behavior change).** `shared/rulesets/{legacy,index}.js`;
+  `state.ruleset` + `state.bounds`; `suitModifier`/`onReshuffle` seams wired with
+  legacy behavior; all board-constant consumers converted to bounds. **Done when
+  the existing test suite passes unchanged.**
+- **7.2 V2 engine rules.** `v2.js` implements the scaled triangle and the shrink,
+  with the K-buff / manilha / magic-vs-magic interactions and a minimum board-width
+  floor. Rules tests parametrized over both rulesets; Legacy assertions untouched.
+- **7.3 Protocol & server.** `getPlayerView` exposes `ruleset` + `bounds`;
+  `CREATE_ROOM` gains a validated `ruleset` field (default legacy); `Room` stores it;
+  rematch/rejoin preserve it. Server test asserts a full V2 game leaks nothing.
+- **7.4 Client rendering (pure).** Board reads `view.bounds`; reveal medallions
+  reflect V2 magic from the engine's `effectiveValues`; `animate.js` gains a
+  `board-shrink` step; ruleset-keyed rulebook content; a "V2" badge beside "Truqué".
+- **7.5 Menu & DOM glue.** Stylized Legacy/V2 menu toggle persisted in `localStorage`,
+  driving the pre-room rulebook preview and the `CREATE_ROOM` payload; lobby shows the
+  room's ruleset; a joiner inherits it (their local pick is ignored for that match).
+- **7.6 Docs.** V2 rulebook copy + §10 decision-log entries (magic sign convention,
+  shrink pawn-slide, board-width floor).
+
+**Done when:** a room created as V2 plays the shrink + scaled-triangle rules over
+the network, a Legacy room is byte-identical to today, and no frame leaks hidden
+cards under either ruleset.
+
 ## 5. Coding conventions
 
 - English for all identifiers, comments, commits, and docs. Domain term kept: `manilha`.
@@ -314,6 +377,7 @@ touched `/shared`, the reducer, or the protocol.
 - [x] Phase 4 — visual pass complete
 - [x] Phase 5 — demo-ready
 - [x] Phase 6 — art direction reworked to the manuscript mock
+- [x] Phase 7 — ruleset variants (Legacy frozen; V2 = board shrink + scaled-triangle magic)
 
 ## 10. Open rule questions (decision log)
 
@@ -368,3 +432,15 @@ _Questions Q10–Q14 were raised and answered during Phase 1 implementation (202
 - A's forced suit-order comparison ignores numeric values entirely, manilha included.
 
 **Q15 — Concede (digital-only addition, Phase 3, 2026-07-13).** Not in the rulebook: a `CONCEDE` action is legal for either player in any running phase and makes the opponent win on the spot (`concededBy` is public in state/views so clients can word the result). Added so an online player can end a game gracefully instead of abandoning the room; the finished room is cleaned up by the normal empty-room GC. The UI requires a two-step confirmation.
+
+### V2 ruleset decisions (Phase 7, 2026-07-14)
+
+These apply only under the `v2` ruleset (`shared/rulesets/v2.js`); Legacy is unchanged. See §4 Phase 7 for the architecture.
+
+**Q16 — Scaled-triangle magic, sign & magnitude.** In V2, ♥ is no longer a flat 0. Its modifier magnitude is the **opponent suit's** current distance-modifier magnitude (`|distanceModifier(opponentSuit, distance)|`); its sign follows the existing suit cycle — **+ against ♦** (♥ beats ♦), **− against ♠** (♠ beats ♥), **0 against ♥**. So magic is neutral mid-board (all modifiers 0) and swings hardest at the extremes, and — because the table is asymmetric — the swing can overturn a higher card of the countered suit. A K still strips it (buffsRemoved bypasses the suit-modifier seam), and a manilha-rank ♥ is still flat 14. Chosen over a "neutralize-and-defer-to-cycle" reading because the value swing is what makes magic engaging in the digital version.
+
+**Q17 — Board shrink, pawn on a removed edge.** Each play-deck reshuffle (detected at the round boundary; `pendingReshuffle` also captures reshuffles caused by swap draws) retracts both board edges by one space. A pawn caught on a removed space **slides inward** to the new edge rather than being eliminated — a reshuffle's timing must never be a coin-flip death. When both pawns are jammed at a removed edge, the inward one pushes the other along (a 4-line clamp preserves `p0 < p1`).
+
+**Q18 — Board-shrink floor.** The shrink is refused when it would leave fewer than **two** spaces (the two danger spaces must stay distinct), so a board of width 3 never shrinks to width 1. A game reaching this floor has its pawns pinned already; the floor only prevents a degenerate board.
+
+**Q19 — Doubling range modifiers on reshuffle (considered, cut).** An idea to double the ♠/♦ modifiers on each reshuffle was rejected for V2: it stacked a second experimental variable on the same trigger, partly contradicted the shrinking board (which compresses distances anyway), and made outcomes swingier at the expense of the card read. The shrink alone delivers the "reshuffle changes things up" novelty.

@@ -4,7 +4,6 @@
  * with the winner's side highlighted.
  */
 
-import { distanceModifier } from '../../../shared/rules.js';
 import { flipCardHTML, rankLabel, suitGlyphHTML } from './card.js';
 
 const signed = (n) => (n > 0 ? `+${n}` : `${n}`);
@@ -71,7 +70,10 @@ function breakdownHTML(resolution, player, t) {
     return `${t('reveal.manilhaWord')} ${total}`;
   }
   const base = `${rankLabel(card.rank)}${suitGlyphHTML(card.suit)}`;
-  const mod = resolution.buffsRemoved ? 0 : distanceModifier(card.suit, resolution.distance);
+  // Read the applied modifier back from the engine's effective value rather than
+  // recomputing it — this stays correct for any ruleset (Legacy's flat suits, a
+  // K's removed buffs, and V2's opponent-dependent magic) with no client math.
+  const mod = resolution.effectiveValues[player] - card.rank;
   if (mod === 0) return `${base} ${total}`;
   return `${base} <em>${signed(mod)} ${t('reveal.dist')}</em> ${total}`;
 }

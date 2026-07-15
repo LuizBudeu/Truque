@@ -18,11 +18,16 @@ export function helpFabHTML(t) {
 }
 
 /** The rules modal, built from the active language's structured sections. */
-export function rulesModalHTML(t) {
-  const sections = t('rules.sections')
+export function rulesModalHTML(t, ruleset = 'legacy') {
+  // V2 keeps the Legacy rulebook and prepends the two variant rules, flagged so a
+  // reader sees exactly what differs (the base Magic / board sections still apply
+  // except where these override them).
+  const base = t('rules.sections');
+  const sectionList = ruleset === 'v2' ? [...t('rules.v2Sections'), ...base] : base;
+  const sections = sectionList
     .map(
       (s) => `
-      <section class="rules-section">
+      <section class="rules-section${s.variant ? ' variant' : ''}">
         <h3>${s.h}</h3>
         ${s.p.map((para) => `<p>${para}</p>`).join('')}
       </section>`,

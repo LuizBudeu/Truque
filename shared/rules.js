@@ -20,6 +20,24 @@ export const BOARD_SIZE = 12;
 /** Each player's first space ("casa de perigo"). Rulebook 2.9. */
 export const DANGER_SPACES = [0, 11];
 
+/**
+ * The starting (and Legacy-permanent) board extent. Under a ruleset that shrinks
+ * the board (V2), the live extent lives on `state.bounds`; these helpers derive
+ * geometry from whatever bounds they are handed. Default = the full board, so
+ * callers with no shrinking ruleset (and existing tests) stay unchanged.
+ */
+export const DEFAULT_BOUNDS = { min: 0, max: BOARD_SIZE - 1 };
+
+/** The two players' danger spaces (first spaces) for a given board extent. */
+export function dangerSpaces(bounds = DEFAULT_BOUNDS) {
+  return [bounds.min, bounds.max];
+}
+
+/** Number of playable spaces for a given board extent. */
+export function boardSize(bounds = DEFAULT_BOUNDS) {
+  return bounds.max - bounds.min + 1;
+}
+
 /** Direction each player advances in (toward the opponent's tower). */
 export const ADVANCE_DIR = [1, -1];
 
@@ -37,15 +55,15 @@ export function retreatTarget(player, position, spaces) {
 }
 
 /** Pushed beyond the danger space = out of the field. Rulebook 2.12. */
-export function isBeyondDanger(player, position) {
-  return player === 0 ? position < DANGER_SPACES[0] : position > DANGER_SPACES[1];
+export function isBeyondDanger(player, position, bounds = DEFAULT_BOUNDS) {
+  return player === 0 ? position < bounds.min : position > bounds.max;
 }
 
 /** Clamp a retreat at the player's danger space (used by K's push, Rulebook 2.8). */
-export function clampToDanger(player, position) {
+export function clampToDanger(player, position, bounds = DEFAULT_BOUNDS) {
   return player === 0
-    ? Math.max(position, DANGER_SPACES[0])
-    : Math.min(position, DANGER_SPACES[1]);
+    ? Math.max(position, bounds.min)
+    : Math.min(position, bounds.max);
 }
 
 // ---------------------------------------------------------------------------
@@ -87,6 +105,23 @@ export function distanceModifier(suit, distance) {
 }
 
 /**
+ * The Legacy suit modifier, expressed as a ruleset seam:
+ * `(card, opponentCard, distance) → number`. Legacy ignores the opponent card
+ * entirely (♥ is a flat 0). A ruleset varies combat by supplying its own
+ * function of this shape (V2's ♥ reads `opponentCard`); the engine never
+ * branches on the ruleset, it just calls the seam it was handed.
+ * Rulebook 2.6, Table 1.
+ *
+ * @param {Card} card
+ * @param {Card|null} _opponentCard - unused by Legacy
+ * @param {number} distance
+ * @returns {number}
+ */
+export function legacySuitModifier(card, _opponentCard, distance) {
+  return distanceModifier(card.suit, distance);
+}
+
+/**
  * Effective numeric value of a card this round.
  *
  * A card of manilha rank is a flat 14, immune to distance modifiers
@@ -98,11 +133,22 @@ export function distanceModifier(suit, distance) {
  * @param {number|null} manilha - manilha rank (2–10) or null (no manilha)
  * @param {number} distance
  * @param {boolean} [buffsRemoved] - true when a K is in play this round
+ * @param {Card|null} [opponentCard] - the other revealed card (some rulesets' modifiers depend on it)
+ * @param {(card: Card, opponentCard: Card|null, distance: number) => number} [suitModifier] - ruleset seam; defaults to Legacy
  * @returns {number}
  */
-export function effectiveValue(card, manilha, distance, buffsRemoved = false) {
+export function effectiveValue(
+  card,
+  manilha,
+  distance,
+  buffsRemoved = false,
+  opponentCard = null,
+  suitModifier = legacySuitModifier,
+) {
   if (manilha !== null && card.rank === manilha) return 14;
-  return card.rank + (buffsRemoved ? 0 : distanceModifier(card.suit, distance));
+  // A K strips ALL distance/suit modifiers this round (Rulebook 2.8), which also
+  // neutralizes any ruleset's dynamic suit modifier — the seam is bypassed here.
+  return card.rank + (buffsRemoved ? 0 : suitModifier(card, opponentCard, distance));
 }
 
 /**
@@ -148,11 +194,14 @@ export function effectiveValue(card, manilha, distance, buffsRemoved = false) {
  * @param {[Card, Card]} cards - picks of player 0 and player 1
  * @param {number|null} manilha
  * @param {number} distance
+ * @param {(card: Card, opponentCard: Card|null, distance: number) => number} [suitModifier] - ruleset seam; defaults to Legacy
  * @returns {Resolution}
  */
-export function resolveCombat(cards, manilha, distance) {
+export function resolveCombat(cards, manilha, distance, suitModifier = legacySuitModifier) {
   const buffsRemoved = cards.some((c) => c.rank === KING); // Rulebook 2.8, K
-  const effectiveValues = cards.map((c) => effectiveValue(c, manilha, distance, buffsRemoved));
+  const effectiveValues = cards.map((c, i) =>
+    effectiveValue(c, manilha, distance, buffsRemoved, cards[1 - i], suitModifier),
+  );
 
   let base;
   let usedSuitCycle = false;

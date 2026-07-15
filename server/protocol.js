@@ -4,7 +4,7 @@
  * JSON, one message per WebSocket frame.
  *
  * Client → server:
- *   { type: 'CREATE_ROOM' }
+ *   { type: 'CREATE_ROOM', ruleset? }              // ruleset id; unknown/absent → Legacy
  *   { type: 'JOIN_ROOM', roomCode, playerToken? }  // playerToken rejoins a seat
  *   { type: 'ACTION', action }                     // validated via shared/validation.js
  *   { type: 'RESYNC' }                             // full view after reconnect
@@ -13,7 +13,7 @@
  * Server → client:
  *   { type: 'ROOM_CREATED', roomCode, playerToken, playerIndex }
  *   { type: 'ROOM_JOINED', roomCode, playerToken, playerIndex }
- *   { type: 'ROOM_STATE', players, status }        // players: [{connected}, ...]
+ *   { type: 'ROOM_STATE', players, status, ruleset } // ruleset: id fixed for the match
  *   { type: 'VIEW', view }                         // PlayerView after every accepted action
  *   { type: 'REJECTED', reason }
  *   { type: 'OPPONENT_STATUS', connected }
@@ -58,6 +58,9 @@ export function parseClientMessage(raw) {
   }
   if (!CLIENT_MESSAGES.includes(msg.type)) return invalid(`unknown message type ${msg.type}`);
 
+  if (msg.type === 'CREATE_ROOM' && msg.ruleset !== undefined && typeof msg.ruleset !== 'string') {
+    return invalid('ruleset must be a string');
+  }
   if (msg.type === 'JOIN_ROOM') {
     if (typeof msg.roomCode !== 'string') return invalid('roomCode must be a string');
     if (msg.playerToken !== undefined && typeof msg.playerToken !== 'string') {

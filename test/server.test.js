@@ -10,7 +10,7 @@ import WebSocket from 'ws';
 import { startServer } from '../server/index.js';
 import { createInitialState, applyAction } from '../shared/reducer.js';
 import { mulberry32 } from '../shared/cards.js';
-import { DANGER_SPACES } from '../shared/rules.js';
+import { dangerSpaces } from '../shared/rules.js';
 import { legalActions } from './helpers.js';
 
 /** The exact serialization of a card in a view (insertion order is rank, suit). */
@@ -74,12 +74,12 @@ class TestClient {
 }
 
 /** Boot a server (fixed seed), create a room with client A, join with client B. */
-async function startGame(t, seed = 4242) {
+async function startGame(t, seed = 4242, ruleset) {
   const server = await startServer({ port: 0, createSeed: () => seed });
   t.after(() => server.close());
 
   const a = await TestClient.connect(server.port);
-  a.send({ type: 'CREATE_ROOM' });
+  a.send({ type: 'CREATE_ROOM', ruleset });
   const created = await a.nextOfType('ROOM_CREATED');
 
   const b = await TestClient.connect(server.port);
@@ -172,69 +172,99 @@ describe('authoritative action handling', () => {
   });
 });
 
-describe('full game over the wire (hidden-information sweep)', () => {
-  test('every frame matches the mirrored state and leaks nothing hidden', async (t) => {
-    const seed = 4242;
-    const { a, b } = await startGame(t, seed);
-    const clients = [a, b];
+describe('ruleset selection', () => {
+  test('the creator picks the ruleset; it reaches the view and the lobby', async (t) => {
+    const { a } = await startGame(t, 4242, 'v2');
+    const view = (await a.nextOfType('VIEW')).view;
+    assert.equal(view.ruleset, 'v2');
+    assert.deepEqual(view.bounds, { min: 0, max: 11 });
 
-    // Mirror the authoritative state locally: same seed, same shared reducer.
-    let shadow = createInitialState(seed);
-    await a.nextOfType('VIEW');
-    await b.nextOfType('VIEW');
-
-    const rng = mulberry32(seed ^ 0x9e3779b9);
-    let steps = 0;
-    while (shadow.winner === null && steps < 5000) {
-      const actions = legalActions(shadow);
-      const action = actions[Math.floor(rng() * actions.length)];
-      clients[action.player].send({ type: 'ACTION', action });
-      shadow = applyAction(shadow, action);
-
-      const endangered = [0, 1].map((p) => shadow.positions[p] === DANGER_SPACES[p]);
-      const openPlay = shadow.phase === 'PICK_CARDS' && endangered[0] !== endangered[1];
-      const openPlayer = endangered[0] ? 1 : 0;
-
-      for (const p of [0, 1]) {
-        const view = (await clients[p].nextOfType('VIEW')).view;
-        // No drift: the wire view mirrors the local reducer's public state.
-        assert.equal(view.playerIndex, p);
-        assert.equal(view.phase, shadow.phase, `phase drift at step ${steps}`);
-        assert.deepEqual(view.positions, shadow.positions, `position drift at step ${steps}`);
-
-        // No leaks: opponent hidden cards never serialize to this client.
-        const json = JSON.stringify(view);
-        const opponent = 1 - p;
-        for (const card of shadow.hands[opponent]) {
-          assert.ok(
-            !json.includes(cardToken(card)),
-            `opponent hand card leaked to player ${p} at step ${steps} (phase ${shadow.phase})`,
-          );
-        }
-        const opponentPick = shadow.pendingPicks[opponent];
-        if (opponentPick && !(openPlay && opponent === openPlayer)) {
-          assert.ok(
-            !json.includes(cardToken(opponentPick)),
-            `secret pick leaked to player ${p} at step ${steps}`,
-          );
-        }
-      }
-      steps++;
-    }
-
-    assert.notEqual(shadow.winner, null, 'game should finish');
-    const finalA = a.frames.at(-1);
-    assert.ok(finalA.includes('"GAME_OVER"'));
-
-    // Blanket sweep: no frame of the entire session ever carried a raw state key.
-    for (const client of clients) {
-      for (const frame of client.frames) {
-        for (const key of FORBIDDEN_KEYS) {
-          assert.ok(!frame.includes(key), `frame leaked state key ${key}: ${frame.slice(0, 120)}`);
-        }
-      }
-    }
+    // The lobby ROOM_STATE advertises the ruleset so a joiner sees what they enter.
+    const roomState = a.frames.map((f) => JSON.parse(f)).find((m) => m.type === 'ROOM_STATE');
+    assert.equal(roomState.ruleset, 'v2');
   });
+
+  test('an unknown ruleset falls back to Legacy', async (t) => {
+    const { a } = await startGame(t, 4242, 'nonsense');
+    assert.equal((await a.nextOfType('VIEW')).view.ruleset, 'legacy');
+  });
+
+  test('an absent ruleset defaults to Legacy', async (t) => {
+    const { a } = await startGame(t, 4242);
+    assert.equal((await a.nextOfType('VIEW')).view.ruleset, 'legacy');
+  });
+});
+
+describe('full game over the wire (hidden-information sweep)', () => {
+  // Run the whole sweep under each ruleset: V2 exercises the shrinking board and
+  // the dynamic-magic modifier over the real protocol, and must leak nothing either.
+  for (const ruleset of ['legacy', 'v2']) {
+    test(`every ${ruleset} frame matches the mirrored state and leaks nothing hidden`, async (t) => {
+      const seed = 4242;
+      const { a, b } = await startGame(t, seed, ruleset);
+      const clients = [a, b];
+
+      // Mirror the authoritative state locally: same seed, same ruleset, same reducer.
+      let shadow = createInitialState(seed, { ruleset });
+      await a.nextOfType('VIEW');
+      await b.nextOfType('VIEW');
+
+      const rng = mulberry32(seed ^ 0x9e3779b9);
+      let steps = 0;
+      while (shadow.winner === null && steps < 5000) {
+        const actions = legalActions(shadow);
+        const action = actions[Math.floor(rng() * actions.length)];
+        clients[action.player].send({ type: 'ACTION', action });
+        shadow = applyAction(shadow, action);
+
+        const danger = dangerSpaces(shadow.bounds);
+        const endangered = [0, 1].map((p) => shadow.positions[p] === danger[p]);
+        const openPlay = shadow.phase === 'PICK_CARDS' && endangered[0] !== endangered[1];
+        const openPlayer = endangered[0] ? 1 : 0;
+
+        for (const p of [0, 1]) {
+          const view = (await clients[p].nextOfType('VIEW')).view;
+          // No drift: the wire view mirrors the local reducer's public state.
+          assert.equal(view.playerIndex, p);
+          assert.equal(view.phase, shadow.phase, `phase drift at step ${steps}`);
+          assert.equal(view.ruleset, ruleset, `ruleset drift at step ${steps}`);
+          assert.deepEqual(view.positions, shadow.positions, `position drift at step ${steps}`);
+          assert.deepEqual(view.bounds, shadow.bounds, `bounds drift at step ${steps}`);
+
+          // No leaks: opponent hidden cards never serialize to this client.
+          const json = JSON.stringify(view);
+          const opponent = 1 - p;
+          for (const card of shadow.hands[opponent]) {
+            assert.ok(
+              !json.includes(cardToken(card)),
+              `opponent hand card leaked to player ${p} at step ${steps} (phase ${shadow.phase})`,
+            );
+          }
+          const opponentPick = shadow.pendingPicks[opponent];
+          if (opponentPick && !(openPlay && opponent === openPlayer)) {
+            assert.ok(
+              !json.includes(cardToken(opponentPick)),
+              `secret pick leaked to player ${p} at step ${steps}`,
+            );
+          }
+        }
+        steps++;
+      }
+
+      assert.notEqual(shadow.winner, null, 'game should finish');
+      const finalA = a.frames.at(-1);
+      assert.ok(finalA.includes('"GAME_OVER"'));
+
+      // Blanket sweep: no frame of the entire session ever carried a raw state key.
+      for (const client of clients) {
+        for (const frame of client.frames) {
+          for (const key of FORBIDDEN_KEYS) {
+            assert.ok(!frame.includes(key), `frame leaked state key ${key}: ${frame.slice(0, 120)}`);
+          }
+        }
+      }
+    });
+  }
 });
 
 describe('reconnection', () => {
@@ -308,6 +338,26 @@ describe('rematch', () => {
     assert.equal(replayA.playerIndex, 0);
     assert.equal(replayB.playerIndex, 1);
     assert.equal(replayA.winner, null);
+  });
+
+  test('a rematch keeps the room ruleset', async (t) => {
+    const { a, b } = await startGame(t, 4242, 'v2');
+    assert.equal((await a.nextOfType('VIEW')).view.ruleset, 'v2');
+    await b.nextOfType('VIEW');
+
+    b.send({ type: 'ACTION', action: { type: 'CONCEDE', player: 1 } });
+    await a.nextOfType('VIEW');
+    await b.nextOfType('VIEW');
+    a.send({ type: 'REQUEST_REMATCH' });
+    await a.nextOfType('REMATCH_STATE');
+    await b.nextOfType('REMATCH_STATE');
+    b.send({ type: 'REQUEST_REMATCH' });
+    await b.nextOfType('REMATCH_STATE');
+
+    const replay = (await a.nextOfType('VIEW')).view;
+    assert.equal(replay.round, 1);
+    assert.equal(replay.ruleset, 'v2', 'the replayed game must keep V2');
+    assert.deepEqual(replay.bounds, { min: 0, max: 11 });
   });
 
   test('a rematch before the game is over is rejected', async (t) => {

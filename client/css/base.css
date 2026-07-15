@@ -337,6 +337,7 @@ button.icon-toggle {
     font-size: 0.8rem;
     font-style: italic;
     margin-top: 8px;
+    margin-bottom: 8px;
 }
 
 .menu-divider {
@@ -368,6 +369,49 @@ button.icon-toggle {
    the join row, where the input must keep the space. */
 .menu-section > button {
     width: 100%;
+}
+
+/* Ruleset selector: an inked two-state segmented control, matching the join row. */
+.ruleset-choice {
+    gap: 6px;
+}
+
+.ruleset-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-soft);
+    text-align: center;
+}
+
+.ruleset-toggle {
+    display: flex;
+    gap: 0;
+}
+
+.ruleset-opt {
+    flex: 1;
+    font-family: var(--display);
+    font-size: 1rem;
+    padding: 8px 10px;
+    color: var(--ink);
+    background: rgba(43, 33, 24, 0.06);
+    border: 1px solid var(--ink);
+    cursor: pointer;
+}
+
+.ruleset-opt + .ruleset-opt {
+    border-left: none;
+}
+
+.ruleset-opt.active {
+    background: var(--ink);
+    color: var(--vellum);
+}
+
+.lobby-ruleset {
+    font-size: 0.95rem;
+    color: var(--ink);
 }
 
 /* The join row reads as one pressed-in field: input and button share a border. */
@@ -475,6 +519,18 @@ button.icon-toggle {
     line-height: 1;
     color: var(--gold);
     text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* A small gold cartouche flagging the V2 ruleset, right of the wordmark. */
+.ruleset-badge {
+    font-family: var(--display);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    padding: 3px 7px;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+    align-self: center;
 }
 
 .hud-stat {
@@ -1221,6 +1277,16 @@ button.icon-toggle {
 .rules-section b {
     color: var(--ink);
     font-weight: 600;
+}
+
+/* V2 variant rules stand apart from the base rulebook with a gold margin rule. */
+.rules-section.variant {
+    padding-left: 12px;
+    border-left: 2px solid var(--gold);
+}
+
+.rules-section.variant h3 {
+    color: var(--gold-deep, var(--gules));
 }
 
 /* --- the help mark: a wax-sealed bookmark in the corner ------------------- */

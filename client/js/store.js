@@ -11,7 +11,7 @@
 import { createInitialState, applyAction } from '../../shared/reducer.js';
 import { getPlayerView } from '../../shared/views.js';
 import { isLegalAction } from '../../shared/validation.js';
-import { DANGER_SPACES } from '../../shared/rules.js';
+import { dangerSpaces } from '../../shared/rules.js';
 
 let state = null;
 const listeners = new Set();
@@ -20,8 +20,8 @@ export function getState() {
   return state;
 }
 
-export function newGame(seed) {
-  state = createInitialState(seed);
+export function newGame(seed, ruleset) {
+  state = createInitialState(seed, { ruleset });
   emit();
 }
 
@@ -55,7 +55,7 @@ export function nextSeat(state) {
       if (!state.swapDone[0]) return 0;
       return state.swapDone[1] ? null : 1;
     case 'PICK_CARDS': {
-      const endangered = [0, 1].map((p) => state.positions[p] === DANGER_SPACES[p]);
+      const endangered = [0, 1].map((p) => state.positions[p] === dangerSpaces(state.bounds)[p]);
       const order = endangered[0] !== endangered[1] ? (endangered[0] ? [1, 0] : [0, 1]) : [0, 1];
       for (const p of order) if (!state.pendingPicks[p]) return p;
       return null;
@@ -93,6 +93,7 @@ export function buildViewModel(view, ui, extra = {}) {
     const publicState = {
       phase: view.phase,
       positions: view.positions,
+      bounds: view.bounds,
       lastResolution: resolution,
     };
     const isPush = resolution.loserEffect.type === 'K_PUSH';

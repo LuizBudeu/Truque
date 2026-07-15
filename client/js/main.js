@@ -23,13 +23,18 @@ import { buildAnimationPlan } from './animate.js';
 import { createConnection } from './net.js';
 import { createSound } from './sound.js';
 import { nextLanguage } from './i18n.js';
+import { isRulesetId } from '../../shared/rulesets/index.js';
 
 const app = document.querySelector('#app');
 const SESSION_KEY = 'truque-session';
 const SUITS_KEY = 'truque-fantasy-suits'; // localStorage: survives across games
 const LANG_KEY = 'truque-lang'; // localStorage: survives across games
 const MUTE_KEY = 'truque-muted'; // localStorage: sound on/off preference
-const HOTSEAT_ENABLED = new URLSearchParams(location.search).has('hotseat');
+const RULESET_KEY = 'truque-ruleset'; // localStorage: last ruleset chosen for a new room
+const params = new URLSearchParams(location.search);
+const HOTSEAT_ENABLED = params.has('hotseat');
+// Hotseat may pick a ruleset via ?ruleset=v2 (a debugging convenience).
+const HOTSEAT_RULESET = isRulesetId(params.get('ruleset')) ? params.get('ruleset') : 'legacy';
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 // First run: honor a stored choice, else guess from the browser locale.
@@ -45,10 +50,12 @@ const ui = {
   rulesOpen: false, // floating rules popup
   aboutOpen: false, // floating colophon (credits) popup
   concedeArmed: false, // first concede click; the HUD asks for confirmation
-  fantasySuits: localStorage.getItem(SUITS_KEY) === '1', // ♠♦♥♣ vs 🗡🏹🔮💀
+  fantasySuits: localStorage.getItem(SUITS_KEY) !== '0', // default on; ♠♦♥♣ only if explicitly turned off
   lang: initialLang, // UI language; see i18n.js
   copied: false, // transient: the invite link was just copied to the clipboard
   muted: localStorage.getItem(MUTE_KEY) === '1', // sound effects off
+  // Ruleset to seed the NEXT room with (creator's choice; joiners inherit).
+  ruleset: localStorage.getItem(RULESET_KEY) === 'v2' ? 'v2' : 'legacy',
 };
 
 // Procedural sound (Phase 5). Cues fire from the animation pump below.
@@ -70,6 +77,7 @@ const online = {
   roomCode: null,
   playerToken: null,
   playerIndex: null,
+  roomRuleset: null, // ruleset the room was created with (from ROOM_STATE); shown in the lobby
   view: null, // last VIEW from the server; null while in the lobby
   opponentConnected: false,
   intent: null, // what to send when the socket (re)opens
@@ -125,8 +133,15 @@ function onClick(event) {
       rerender();
       break;
     case 'create-room':
-      goOnline({ create: true });
+      goOnline({ create: true, ruleset: ui.ruleset });
       break;
+    case 'select-ruleset': {
+      const chosen = el.dataset.ruleset === 'v2' ? 'v2' : 'legacy';
+      ui.ruleset = chosen;
+      localStorage.setItem(RULESET_KEY, chosen);
+      rerender();
+      break;
+    }
     case 'join-room':
       joinFromInput();
       break;
@@ -324,6 +339,7 @@ function goOnline(intent) {
   online.intent = intent;
   online.roomCode = intent.roomCode ?? null;
   online.playerToken = intent.playerToken ?? null;
+  online.roomRuleset = null;
   online.view = null;
   online.opponentConnected = false;
   online.rematch = { you: false, opponent: false };
@@ -336,7 +352,7 @@ function goOnline(intent) {
       if (online.roomCode && online.playerToken) {
         net.send({ type: 'JOIN_ROOM', roomCode: online.roomCode, playerToken: online.playerToken });
       } else if (online.intent.create) {
-        net.send({ type: 'CREATE_ROOM' });
+        net.send({ type: 'CREATE_ROOM', ruleset: online.intent.ruleset });
       } else {
         net.send({ type: 'JOIN_ROOM', roomCode: online.intent.roomCode });
       }
@@ -361,6 +377,7 @@ function onServerMessage(msg) {
       rerender();
       break;
     case 'ROOM_STATE':
+      online.roomRuleset = msg.ruleset ?? 'legacy'; // a joiner learns the room's rules here
       online.opponentConnected = msg.players.some(
         (p, i) => i !== online.playerIndex && p.connected,
       );
@@ -445,7 +462,8 @@ function startHotseat() {
   seat = null;
   pendingSeat = null;
   clearTransitions();
-  newGame(Date.now() >>> 0); // seeded RNG lives in /shared; the seed itself may be wall-clock
+  // seeded RNG lives in /shared; the seed itself may be wall-clock. Ruleset via ?ruleset=.
+  newGame(Date.now() >>> 0, HOTSEAT_RULESET);
 }
 
 function onHotseatStateChange(state) {
@@ -471,6 +489,7 @@ function currentModel() {
         connection: online.connection,
         copied: ui.copied,
         lang: ui.lang,
+        ruleset: online.roomRuleset, // shown so a joiner knows which rules they entered
         rulesOpen: ui.rulesOpen,
         aboutOpen: ui.aboutOpen,
       };
@@ -491,6 +510,7 @@ function currentModel() {
     hotseatEnabled: HOTSEAT_ENABLED,
     error: menuError,
     lang: ui.lang,
+    ruleset: ui.ruleset, // drives the menu toggle and the pre-room rulebook preview
     rulesOpen: ui.rulesOpen,
     aboutOpen: ui.aboutOpen,
   };
@@ -573,6 +593,14 @@ async function runPlan(plan) {
         sound.play('move');
         await slidePawns(step);
         break;
+      case 'board-shrink':
+        // The board already rendered at its new (narrower) extent; play a brief
+        // settle on it so the change registers. Rulebook V2.
+        app.querySelector('.board')?.classList.add('shrinking');
+        sound.play('move');
+        await wait(step.duration);
+        app.querySelector('.board')?.classList.remove('shrinking');
+        break;
     }
   }
 }
@@ -581,10 +609,13 @@ async function runPlan(plan) {
  *  then release so a CSS transition carries it to its rendered position. */
 async function slidePawns(step) {
   const spaces = app.querySelectorAll('.board .space');
+  // The board only renders its current extent, so a space's DOM index is the
+  // absolute position minus the board's low edge (0 in Legacy; higher in V2).
+  const min = renderedView(lastModel)?.bounds?.min ?? 0;
   const moved = [];
   for (const { player, from, to } of step.moves) {
     const pawn = app.querySelector(`.pawn-p${player}`);
-    const [a, b] = [spaces[from], spaces[to]];
+    const [a, b] = [spaces[from - min], spaces[to - min]];
     if (!pawn || !a || !b) continue;
     const dx = a.getBoundingClientRect().left - b.getBoundingClientRect().left;
     pawn.style.transform = `translateX(${dx}px)`;

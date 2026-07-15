@@ -24,7 +24,7 @@
  * UI string lives in this module.
  */
 
-import { DANGER_SPACES } from "../../shared/rules.js";
+import { dangerSpaces } from "../../shared/rules.js";
 import { createTranslator, DEFAULT_LANG, languageMeta } from "./i18n.js";
 import { boardHTML } from "./ui/board.js";
 import { handHTML } from "./ui/hand.js";
@@ -60,7 +60,10 @@ export function renderApp(model) {
 function chromeHTML(model, t, lang) {
     const rulesOpen = model.ui?.rulesOpen ?? model.rulesOpen;
     const aboutOpen = model.ui?.aboutOpen ?? model.aboutOpen;
-    return `${helpFabHTML(t)}${aboutFabHTML(t)}${rulesOpen ? rulesModalHTML(t) : ""}${aboutOpen ? aboutModalHTML(t) : ""}`;
+    // In a match the rulebook follows the room's ruleset (view.ruleset); on the
+    // menu/lobby it follows the current selection (model.ruleset, Phase 5).
+    const ruleset = model.view?.ruleset ?? model.ruleset ?? "legacy";
+    return `${helpFabHTML(t)}${aboutFabHTML(t)}${rulesOpen ? rulesModalHTML(t, ruleset) : ""}${aboutOpen ? aboutModalHTML(t) : ""}`;
 }
 
 /**
@@ -96,8 +99,9 @@ export function maniculeFocus(model) {
         case "PICK_CARDS": {
             if (view.selfCommitted) return "opponent";
             // Rulebook 2.9: in the danger zone you wait for their open card first.
-            const selfEndangered = view.positions[seat] === DANGER_SPACES[seat];
-            const opponentEndangered = view.positions[1 - seat] === DANGER_SPACES[1 - seat];
+            const danger = dangerSpaces(view.bounds);
+            const selfEndangered = view.positions[seat] === danger[seat];
+            const opponentEndangered = view.positions[1 - seat] === danger[1 - seat];
             const openPlay = selfEndangered !== opponentEndangered;
             if (openPlay && selfEndangered && !view.openCard) return "opponent";
             return "hand"; // the choice is a card, so point at the cards
@@ -120,6 +124,27 @@ function playerName(t, index, youIndex, online) {
 const crestHTML = () => `<svg class="menu-crest" aria-hidden="true"><use href="#swords"/></svg>`;
 
 /** The entry screen: a proclamation nailed to the door. */
+/**
+ * The stylized Legacy/V2 selector on the menu — a two-state inked segmented
+ * control. Only the creator picks; joiners inherit the room's ruleset. The choice
+ * also drives the rules FAB's preview (chromeHTML reads model.ruleset).
+ */
+function rulesetToggleHTML(ruleset, t) {
+    const opt = (id, name) =>
+        `<button type="button" class="ruleset-opt${ruleset === id ? " active" : ""}"
+             data-action="select-ruleset" data-ruleset="${id}"
+             aria-pressed="${ruleset === id}">${name}</button>`;
+    return `
+      <div class="menu-section ruleset-choice">
+        <span class="ruleset-label">${t("menu.rulesetLabel")}</span>
+        <div class="ruleset-toggle" role="group" aria-label="${t("menu.rulesetLabel")}">
+          ${opt("legacy", t("ruleset.legacyName"))}
+          ${opt("v2", t("ruleset.v2Name"))}
+        </div>
+        <p class="hint">${t(ruleset === "v2" ? "menu.v2Hint" : "menu.legacyHint")}</p>
+      </div>`;
+}
+
 function menuHTML(model, t, lang) {
     const hotseat = model.hotseatEnabled
         ? `
@@ -137,6 +162,7 @@ function menuHTML(model, t, lang) {
         <h1>Truqué</h1>
         <p class="tagline">${t("menu.tagline")}</p>
         ${model.error ? `<p class="error">${model.error}</p>` : ""}
+        ${rulesetToggleHTML(model.ruleset ?? "legacy", t)}
         <div class="menu-section">
           <button type="button" class="primary" data-action="create-room">${t("menu.createRoom")}</button>
           <p class="hint">${t("menu.createHint")}</p>
@@ -164,6 +190,7 @@ function lobbyHTML(model, t) {
         <h1>Truqué</h1>
         <p class="tagline">${t("lobby.roomCode")}</p>
         <p class="room-code">${model.roomCode ?? "····"}</p>
+        ${model.ruleset ? `<p class="lobby-ruleset">${t("lobby.rulesetLabel")}: <b>${t(model.ruleset === "v2" ? "ruleset.v2Name" : "ruleset.legacyName")}</b></p>` : ""}
         <p class="hint">${t("lobby.shareHint")}</p>
         <div class="menu-section">
           <button type="button" class="primary" data-action="copy-link"${model.roomCode ? "" : " disabled"}>
@@ -307,8 +334,9 @@ function swapZoneHTML(model, t) {
 function pickZoneHTML(model, t) {
     const { view, seat } = model;
     const opponent = 1 - seat;
-    const selfEndangered = view.positions[seat] === DANGER_SPACES[seat];
-    const opponentEndangered = view.positions[opponent] === DANGER_SPACES[opponent];
+    const danger = dangerSpaces(view.bounds);
+    const selfEndangered = view.positions[seat] === danger[seat];
+    const opponentEndangered = view.positions[opponent] === danger[opponent];
     const openPlay = selfEndangered !== opponentEndangered;
 
     if (view.selfCommitted) {

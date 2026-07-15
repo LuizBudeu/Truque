@@ -18,6 +18,9 @@ export const C = (rank, suit) => ({ rank, suit });
 export function makeState(overrides = {}) {
   return {
     phase: 'PICK_CARDS',
+    ruleset: 'legacy',
+    bounds: { min: 0, max: 11 },
+    pendingReshuffle: false,
     round: 1,
     manilha: null,
     manilhaCard: C(11, 'clubs'),
@@ -79,9 +82,9 @@ export function legalActions(state) {
  * Play a full seeded game with uniformly random legal actions. Calls
  * onStep(state, action) after every applied action.
  */
-export function autoPlay(seed, { maxSteps = 5000, onStep } = {}) {
+export function autoPlay(seed, { maxSteps = 5000, onStep, ruleset } = {}) {
   const rng = mulberry32(seed ^ 0x9e3779b9);
-  let state = createInitialState(seed);
+  let state = createInitialState(seed, { ruleset });
   let steps = 0;
   while (state.winner === null && steps < maxSteps) {
     const actions = legalActions(state);
@@ -121,7 +124,9 @@ export function checkInvariants(state) {
   if (state.manilhaDeck.length !== 13) fail('manilha deck must always hold 13 cards');
 
   const [p0, p1] = state.positions;
-  if (p0 < 0 || p1 > 11) fail(`position off board: [${p0}, ${p1}]`);
+  const { min, max } = state.bounds;
+  if (min < 0 || max > 11 || min >= max) fail(`bad bounds: [${min}, ${max}]`);
+  if (p0 < min || p1 > max) fail(`position off board: [${p0}, ${p1}] in bounds [${min}, ${max}]`);
   if (p0 >= p1) fail(`pawns passed or share a space: [${p0}, ${p1}]`);
 
   for (const p of [0, 1]) {

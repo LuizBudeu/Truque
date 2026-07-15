@@ -26,6 +26,21 @@
     margin-right: 5px;
 }
 
+/* V2 board shrink: a brief settle when the extents narrow on a reshuffle. */
+@keyframes board-settle {
+    0% { transform: scaleX(1.05); filter: brightness(1.15); }
+    100% { transform: scaleX(1); filter: brightness(1); }
+}
+
+.board.shrinking {
+    animation: board-settle 520ms ease-out;
+    transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .board.shrinking { animation: none; }
+}
+
 .space {
     position: relative;
     width: 56px;
@@ -197,6 +212,33 @@
 }
 
 .mod.nerfed .val {
+    color: var(--gules);
+}
+
+/* V2 magic: a dual readout (value vs bow / vs sword) in place of a single number. */
+.mod.dynamic .val.vs-pair {
+    display: flex;
+    gap: 8px;
+    font-size: 0.95rem;
+}
+
+.mod.dynamic .vs {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+}
+
+.mod.dynamic .vs .suit-glyph {
+    font-size: 0.7em;
+    opacity: 0.8;
+}
+
+/* Each magic value is coloured by its own sign, like the buff/nerf medallions. */
+.mod.dynamic .n.buffed {
+    color: var(--azure);
+}
+
+.mod.dynamic .n.nerfed {
     color: var(--gules);
 }
 
