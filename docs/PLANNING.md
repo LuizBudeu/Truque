@@ -364,7 +364,7 @@ _Questions Q10–Q14 were raised and answered during Phase 1 implementation (202
 - Pawns never pass or share a space: the winner's advance caps at the space adjacent to the opponent (distance 0).
 - The winner's voluntary retreat caps at their own first space — no voluntary elimination.
 - Forced retreats (base 1, A's 2, tie retreat) beyond a player's first space eliminate them (rulebook 2.12). K's push instead clamps at the loser's first space — except when the loser already stands there, where any push ≥ 1 eliminates them (rulebook 2.8, parenthetical).
-- Conflicting loss effects: a loser who played K returns to their first space; this replaces any other retreat effect (e.g. also losing against an A).
+- Conflicting loss effects: a loser who played K returns to their first space; this replaces any other retreat effect (e.g. also losing against an A). Exception: a loser **already standing on their danger space** is eliminated for losing there at all (Q4 generalized to any loss) — the danger-zone rule overrides the K's return-to-first mitigation, otherwise losing with K on the edge would be a free escape.
 - A's forced suit-order comparison ignores numeric values entirely, manilha included.
 
 **Q15 — Concede (digital-only addition, Phase 3, 2026-07-13).** Not in the rulebook: a `CONCEDE` action is legal for either player in any running phase and makes the opponent win on the spot (`concededBy` is public in state/views so clients can word the result). Added so an online player can end a game gracefully instead of abandoning the room; the finished room is cleaned up by the normal empty-room GC. The UI requires a two-step confirmation.

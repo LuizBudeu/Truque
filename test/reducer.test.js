@@ -203,6 +203,25 @@ describe("special-card movement", () => {
         assert.equal(s2.lastResolution.winner, 1);
     });
 
+    test("losing with K on your own danger space loses the game (§10 Q4)", () => {
+        const s0 = makeState({
+            manilha: 9,
+            manilhaCard: C(9, "clubs"),
+            positions: [0, 7],
+            hands: [
+                [C(13, "spades"), C(2, "hearts"), C(3, "hearts"), C(4, "hearts")],
+                [C(9, "hearts"), C(2, "spades"), C(3, "spades"), C(4, "spades")],
+            ],
+        });
+        // Player 0 is endangered, so player 1 commits and reveals first (2.9).
+        const s1 = applyAction(s0, { type: "PLAY_CARD", player: 1, card: C(9, "hearts") });
+        // manilha 9♥ (14) beats K → RETURN_TO_FIRST, but player 0 already stands
+        // on their danger space, so they are eliminated instead of re-placed.
+        const s2 = applyAction(s1, { type: "PLAY_CARD", player: 0, card: C(13, "spades") });
+        assert.equal(s2.phase, "GAME_OVER");
+        assert.equal(s2.winner, 1);
+    });
+
     const kPushState = (positions) =>
         makeState({
             phase: "WINNER_MOVE",

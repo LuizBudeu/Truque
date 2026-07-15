@@ -259,7 +259,13 @@ function resolveRound(state) {
     }
     next = { ...next, positions: setIndex(next.positions, loser, target) };
   } else if (effect.type === 'RETURN_TO_FIRST') {
-    // Rulebook 2.8: lost with K — back to own first space (§10 Q1).
+    // Rulebook 2.8: lost with K — back to own first space (§10 Q1). But a loser
+    // already standing on their danger space loses for losing there at all
+    // (Rulebook 2.9/2.12; §10 Q4 generalized to any loss); that overrides the
+    // K's return-to-first mitigation.
+    if (next.positions[loser] === DANGER_SPACES[loser]) {
+      return gameOver(next, winner);
+    }
     next = { ...next, positions: setIndex(next.positions, loser, DANGER_SPACES[loser]) };
   }
   // K_PUSH is the winner's choice — applied in CHOOSE_MOVE. The winner always
